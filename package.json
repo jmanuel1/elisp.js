@@ -5,7 +5,7 @@
   "main": "elisp/elisp.js",
   "scripts": {
     "repl": "node repl.js",
-    "test": "node_modules/mocha/bin/mocha",
+    "test": "mocha",
     "bench": "./bench/bench",
     "demo": "cp demo/*.htm dist/ && npx webpack --mode=production && cd dist && python3 -m http.server"
   },
