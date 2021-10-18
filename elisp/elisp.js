@@ -6,7 +6,7 @@ const translate = require('./translate');
 
 const Environment = require('./environment').Environment;
 
-function fcall(args, env) {
+async function fcall(args, env) {
   /* `this` is LispFun, do not call otherwise */
   if (args.length != this.args.length)
     throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
@@ -23,29 +23,30 @@ function fcall(args, env) {
       body = ty.cons(ty.symbol('progn'), body);
     }
 
-    this.jscode = translate.lambda(this.args, body, env);
-    // console.error(`### fcall : ${this.jscode}`);
+    this.jscode = await translate.lambda(this.args, body, env);
+    console.debug(`### fcall : ${this.jscode}`);
     this.func = eval(this.jscode);
   }
 
   try {
     env.push.call(env, this.args, args);
-    var result = this.func();
+    var result = await Promise.resolve(this.func());
   } finally {
     env.pop.call(env, this.args);
   }
   return result;
 }
 
-function eval_lisp(expr, env) {
+async function eval_lisp(expr, env) {
   env = env || new Environment('env');
 
   let result;
   let saved_env = global[env.name];
   try {
     global[env.name] = env;
-    let jscode = translate.expr(expr, env);
-    result = eval(jscode);
+    let jscode = await translate.expr(expr, env);
+    console.debug('jscode', jscode);
+    result = await Promise.resolve(eval(jscode));
   } finally {
     global[env.name] = saved_env;
   }
@@ -53,9 +54,9 @@ function eval_lisp(expr, env) {
   return result;
 }
 
-function eval_text(input, env) {
+async function eval_text(input, env) {
   let expr = parser.read(input);
-  let result = eval_lisp(expr, env);
+  let result = await eval_lisp(expr, env);
   return result.to_string();
 }
 

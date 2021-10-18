@@ -120,6 +120,9 @@ NilClass.prototype.equals = (that) => that == LispNil;
 
 
 function LispCons(hd, tl) {
+  if (hd instanceof Promise) {
+    throw Error('no promises here!');
+  }
   this.hd = hd;
   this.tl = tl;
 };
@@ -262,7 +265,7 @@ Object.defineProperty(LispVector.prototype,
 LispVector.prototype.to_string = function() {
   return '[' + this.arr.map(obj => obj.to_string()).join(' ') + ']';
 };
-LispVector.prototype.to_js = function() { return this.arr; };
+LispVector.prototype.to_js = LispVector.prototype.to_array = function() { return this.arr; };
 LispVector.prototype.to_jsstring = function() {
   return 'ty.vector([' + this.arr.map((it) => it.to_jsstring()).join(', ') + '])';
 };
@@ -350,15 +353,16 @@ LispFun.prototype.to_string = function() {
   return LispCons.prototype.to_string.call(this);
 };
 
-LispFun.prototype.fcall = function(args, env) {
+LispFun.prototype.fcall = async function(args, env) {
+  console.debug('lispfun fcall');
   try {
-    return elisp.fcall.call(this, args, env);
+    return await Promise.resolve(elisp.fcall.call(this, args, env));
   } catch (e) {
     if (e.message !== 'Macro accessed as a function')
       throw e;
     /* trigger recompilation */
     this.func = undefined;
-    return elisp.fcall.call(this, args, env);
+    return await Promise.resolve(elisp.fcall.call(this, args, env));
   }
 };
 
@@ -383,8 +387,8 @@ LispSubr.prototype.to_string = function() { return "#<subr " + this.name + ">"; 
 LispSubr.prototype.to_js = function() { return this.func; }
 LispSubr.prototype.to_jsstring = function () { return "subr.all['" + this.name + "']"; };
 
-LispSubr.prototype.fcall = function(args, env) {
-  return this.func.call(env, args);
+LispSubr.prototype.fcall = async function(args, env) {
+  return await Promise.resolve(this.func.call(env, args));
 };
 
 /*
@@ -410,7 +414,7 @@ LispMacro.from = function(lst) {
 
 LispMacro.prototype = Object.create(LispCons.prototype);
 
-LispMacro.prototype.macroexpand = function(args, env) {
+LispMacro.prototype.macroexpand = async function(args, env) {
   args = args.to_array();
   return this.transform.fcall(args, env);
 };
@@ -419,20 +423,15 @@ LispMacro.prototype.macroexpand = function(args, env) {
 /*
  *  Errors
  */
-function LispError() {
-  let err = Error.apply(this, arguments);
-  this.name = err.name = 'LispError';
+class LispError extends Error {
+  constructor(...args) {
+    super(...args);
+    this.name = 'LispError';
 
-  this.message = err.message;
-  this.fileName = err.fileName;
-  this.lineNumber = err.lineNumber;
-
-  let stack = err.stack.split('\n');
-  this.stack = stack.slice(0, 1).concat(stack.slice(2)).join('\n');
+    let stack = this.stack.split('\n');
+    this.stack = stack.slice(0, 1).concat(stack.slice(2)).join('\n');
+  }
 }
-
-LispError.prototype = Object.create(Error.prototype);
-
 
 /*
  *  exports

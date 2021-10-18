@@ -126,12 +126,12 @@ let rl = readline.createInterface({
 
 rl.prompt();
 
-rl.on('line', (line) => {
+rl.on('line', async (line) => {
   line = line.trim();
   if (!line) return;
 
   try {
-    let result = elisp.eval_text(line, env);
+    let result = await elisp.eval_text(line, env);
     console.log(result);
   } catch (e) {
     let jsdebug = env.has_jsdebug();

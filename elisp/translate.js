@@ -93,20 +93,20 @@ Context.prototype.to_jsstring = function(env) {
 function translate_get(name, env, ctx) {
   if (ctx) {
     let jsname = ctx.addvar(name);
-    return `${jsname}.get()`;
+    return `Promise.resolve(${jsname}.get())`;
   }
-  return `${env.to_jsstring()}.get('${name}')`;
+  return `Promise.resolve(${env.to_jsstring()}.get('${name}'))`;
 }
 
 function translate_fget(name, env, ctx) {
   if (ctx) {
     let jsname = ctx.addfun(name);
-    return `${jsname}.get()`;
+    return `Promise.resolve(${jsname}.get())`;
   }
-  return `${env.to_jsstring()}.fget('${name}')`;
+  return `Promise.resolve(${env.to_jsstring()}.fget('${name}'))`;
 }
 
-function translate_let(args, env, ctx) {
+async function translate_let(args, env, ctx) {
   /* sanity checks */
   if (args.is_false)
     throw new ty.LispError('Wrong number of arguments: let', 0);
@@ -135,14 +135,15 @@ function translate_let(args, env, ctx) {
   let names = [];
   let values = [];
   let errors = [];
-  varlist.forEach((binding) => {
+  console.debug('varlist', varlist);
+  for (let binding of varlist.to_array()) {
     if (ty.is_symbol(binding)) {
       names.push(binding.to_string());
       values.push(ty.nil.to_jsstring());
     } else if (ty.is_cons(binding)) {
       let name = binding.hd;
       binding = binding.tl;
-      let jsval = translate_expr(binding.hd || ty.nil, env, ctx);
+      let jsval = await translate_expr(binding.hd || ty.nil, env, ctx);
       binding = binding.tl;
       if (binding && !binding.is_false) {
         let msg = "'let' bindings can have only one value-form: " + name.to_string();
@@ -158,25 +159,25 @@ function translate_let(args, env, ctx) {
       }
     } else
       errors.push('Wrong type argument: listp, ' + binding.to_string());
-  });
+  }
 
   if (errors.length) {
-    return `(() => {
+    return `(async () => {
       throw new ty.LispError("${errors[0]}");
     })()`;
   }
 
 
   let ctx1 = new Context(ctx, names);
-  let jscode = body ? translate_expr(body, env, ctx1) : ty.nil.to_jsstring();
+  let jscode = body ? await translate_expr(body, env, ctx1) : ty.nil.to_jsstring();
   let jsctx = ctx1.to_jsstring(env);
 
   let jsenv = env.to_jsstring();
   let jsnames = names.map((n) => '`'+n+'`').join(', ');
   let jsvalues = values.join(', ');
-  return `(() => {
-    ${jsenv}.push([${jsnames}], [${jsvalues}]);
-    ${jsctx} let result = ${jscode};
+  return `(async () => {
+    ${jsenv}.push([${jsnames}], await Promise.all([${jsvalues}]));
+    ${jsctx} let result = await Promise.resolve(${jscode});
     ${jsenv}.pop([${jsnames}]);
     return result;
   })()`;
@@ -184,7 +185,7 @@ function translate_let(args, env, ctx) {
 
 function translate_lambda(args, env) {
   let error = (msg, tag) => {
-    return `ty.lambda([], ty.list([ty.symbol('error'), ty.string('${msg}')]))`
+    return `Promise.resolve(ty.lambda([], ty.list([ty.symbol('error'), ty.string('${msg}')]))) `
   };
   if (args.is_false)
     return error("Invalid function: (lambda)");
@@ -203,7 +204,7 @@ function translate_lambda(args, env) {
   argspec = argspec.map((arg) => '`' + arg + '`');
   argspec = '[' + argspec.join(', ') + ']';
 
-  return `ty.lambda(${argspec}, ${body.to_jsstring()})`;
+  return `Promise.resolve(ty.lambda(${argspec}, ${body.to_jsstring()}))`;
 }
 
 let specials = {
@@ -215,15 +216,16 @@ let specials = {
       throw new ty.LispError('Wrong number of arguments: quote, ' + args.seqlen());
 
     let what = args.hd;
-    return what.to_jsstring();
+    return `Promise.resolve(${what.to_jsstring()})`;
   },
 
-  'setq': function(args, env, ctx) {
+  'setq': async function(args, env, ctx) {
     args = args.to_array();
+    console.debug('setq', args);
     if (args.length % 2)
       throw new ty.LispError('Wrong number of arguments: setq, ' + args.length);
     if (args.length == 0) {
-      return 'ty.nil';
+      return 'Promise.resolve(ty.nil)';
     }
 
     if (args.length == 2) {
@@ -236,11 +238,11 @@ let specials = {
 
       if (ctx) {
         let jsvar = ctx.addvar(name);
-        let jsval = translate_expr(value, env, ctx);
-        return `${jsvar}.set(${jsval})`;
+        let jsval = await translate_expr(value, env, ctx);
+        return `${jsval}.then(val => ${jsvar}.set(val))`;
       }
-      let jsval = translate_expr(value, env, ctx);
-      return `${env.to_jsstring()}.set('${name}', ${jsval})`;
+      let jsval = await translate_expr(value, env, ctx);
+      return `${jsval}.then(val => ${env.to_jsstring()}.set('${name}', val))`;
     }
 
     let pairs = [];
@@ -256,59 +258,59 @@ let specials = {
 
       if (ctx) ctx.checkFree(name);
 
-      let jsval = translate_expr(value, env, ctx);
+      let jsval = await translate_expr(value, env, ctx);
 
       pairs.push("'" + name + "'");
-      pairs.push(jsval);
+      pairs.push(`await ${jsval}`);
     }
-    return env.to_jsstring() + ".set(" + pairs.join(", ") + ")";
+    return '(async () => ' + env.to_jsstring() + ".set(" + pairs.join(", ") + "))()";
   },
 
-  'if': function(args, env, ctx) {
+  'if': async function(args, env, ctx) {
     args = args.to_array();
     if (args.length != 3)
       throw new ty.LispError('Wrong number of arguments: if, ' + args.length);
 
-    let cond = translate_expr(args[0], env);
-    let thenb = translate_expr(args[1], env);
-    let elseb = translate_expr(args[2], env);
+    let cond = await translate_expr(args[0], env);
+    let thenb = await translate_expr(args[1], env);
+    let elseb = await translate_expr(args[2], env);
 
-    return '(!(' + cond + ').is_false ? (' + thenb + ') : (' + elseb + '))';
+    return `Promise.all([${cond}, ${thenb}, ${elseb}]).then(([cond, thenb, elseb]) => (!(cond).is_false ? (thenb) : (elseb))) `;
   },
 
-  'progn': function(args, env, ctx) {
+  'progn': async function(args, env, ctx) {
     if (args.is_false)
       return ty.nil.to_jsstring();
     args = args.to_array();
     let last = args.pop();
 
     let stmts = [];
-    args.forEach((arg) => {
-      stmts.push(translate_expr(arg, env, ctx));
-    });
-    stmts.push('return ' + translate_expr(last, env, ctx) + ';\n');
+    for (let arg of args) {
+      stmts.push('await ' + await translate_expr(arg, env, ctx));
+    }
+    stmts.push('return ' + await translate_expr(last, env, ctx) + ';\n');
 
-    return '(() => { ' + stmts.join(';\n') + '})()';
+    return '(async () => { ' + stmts.join(';\n') + '})()';
   },
 
-  'while': function(args, env, ctx) {
+  'while': async function(args, env, ctx) {
     if (args.is_false)
       throw new ty.LispError("Wrong number of arguments: while, 0");
     let condition = args.hd;
     let body = args.tl;
 
-    condition = translate_expr(condition, env, ctx);
+    condition = await translate_expr(condition, env, ctx);
     if (body.is_false) {
       body = ''
     } else if (body.tl.is_false) {
-      body = translate_expr(body.hd, env, ctx);
+      body = await translate_expr(body.hd, env, ctx);
     } else {
       body = ty.cons(ty.symbol('progn'), body);
-      body = translate_expr(body, env, ctx);
+      body = await translate_expr(body, env, ctx);
     }
-    return `(() => {
-      while (!${condition}.is_false) {
-        ${body}
+    return `(async () => {
+      while (!(await ${condition}).is_false) {
+        await ${body}
       };
       return ty.nil;
     })()`;
@@ -317,10 +319,10 @@ let specials = {
 };
 
 
-function translate_expr(input, env, ctx) {
+async function translate_expr(input, env, ctx) {
   if (input.is_false) {
     /* nil */
-    return ty.nil.to_jsstring();
+    return `Promise.resolve(${ty.nil.to_jsstring()})`;
   }
   if (ty.is_cons(input)) {
     /* a form */
@@ -340,7 +342,7 @@ function translate_expr(input, env, ctx) {
       if (env.is_fbound(sym)) {
         let f = env.fget(sym, true);
         if (ty.is_macro(f)) {
-          let expanded = f.macroexpand(args, env);
+          let expanded = await f.macroexpand(args, env);
           return translate_expr(expanded, env, ctx);
         }
       }
@@ -349,30 +351,31 @@ function translate_expr(input, env, ctx) {
       callable = translate_fget(sym, env, ctx);
     } else if (ty.is_list(hd)) {
       /* ((some form) ...) */
-      callable = translate_expr(hd, env, ctx);
+      callable = await translate_expr(hd, env, ctx);
     } else {
       /* (:wrongtype ...) */
-      callable = `ty.subr('#<error>', [], (() => { throw new ty.LispError('Invalid function: ${hd.to_string()}'); }))`;
+      callable = `Promise.resolve(ty.subr('#<error>', [], (() => { throw new ty.LispError('Invalid function: ${hd.to_string()}'); })))`;
     }
 
     let jsenv = env.to_jsstring();
     let jsargs = [];
-    args.forEach((item) => {
-      let val = translate_expr(item, env, ctx);
-      jsargs.push(val);
-    });
-    jsargs = '[' + jsargs.join(', ') + ']';
+    for (let item of args.to_array()) {
+      let val = await translate_expr(item, env, ctx);
+      jsargs.push(`Promise.resolve(${val})`);
+    }
+    jsargs = 'Promise.all([' + jsargs.join(', ') + '])';
 
-    return callable + `.fcall(${jsargs}, ${jsenv})`;
+    return `Promise.resolve(${callable}).then(async f => f.fcall(await ${jsargs}, ${jsenv})) `;
   }
 
   if (ty.is_symbol(input)) {
     if (input.is_selfevaluating())
-      return input.to_jsstring();
+      return `Promise.resolve(${input.to_jsstring()})`;
     return translate_get(input.to_string(), env, ctx);
   }
   if (ty.is_atom(input)) {
-    return input.to_jsstring();
+    console.debug('input', input);
+    return `Promise.resolve(${input.to_jsstring()})`;
   }
   throw new Error('Failed to translate: ' + input.to_string());
 };
@@ -380,15 +383,15 @@ function translate_expr(input, env, ctx) {
 /*
  *    Exports
  */
-exports.expr = (input, env) => {
+exports.expr = async (input, env) => {
   env = env || new Environment();
   return translate_expr(input, env);
 };
 
-exports.lambda = (args, body, env) => {
+exports.lambda = async (args, body, env) => {
   let ctx = new Context(null, args);
 
-  let jsbody = translate_expr(body, env, ctx);
+  let jsbody = await translate_expr(body, env, ctx);
   let jsctx = ctx.to_jsstring(env);
 
   /*
@@ -398,7 +401,7 @@ exports.lambda = (args, body, env) => {
   console.error('### lambda: freevars = ' + freevars.join(','));
   */
 
-  return `(() => { ${jsctx} return ${jsbody}; })`;
+  return `(async () => { ${jsctx} return ${jsbody}; })`;
 };
 
 exports.special_forms = Object.keys(specials);

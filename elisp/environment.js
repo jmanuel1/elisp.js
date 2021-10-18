@@ -21,6 +21,9 @@ Variable.prototype.get = function() {
   throw new ty.LispError(`Symbol's value as ${ns} is void: ${this.name}`);
 };
 Variable.prototype.set = function(val) {
+  if (val instanceof Promise) {
+    throw Error('no promises here!');
+  }
   if (this.is_fun)
     val = ty.from_list(val)
   this.stack[0] = val;

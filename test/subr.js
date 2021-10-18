@@ -8,14 +8,14 @@ const Environment = require('../elisp/environment').Environment;
 const eval_text = require('../elisp/elisp').eval_text;
 
 describe('subr', () => {
-  let assertEval = (input, output) => {
-    let result = eval_text(input);
+  let assertEval = async (input, output) => {
+    let result = await eval_text(input);
     assert.equal(result, output);
   };
-  let assertEvalT = (input) => assertEval(input, 't');
-  let assertEvalF = (input) => assertEval(input, 'nil');
-  let assertThrows = (input, message) => {
-    assert.throws(() => eval_text(input), ty.LispError);
+  let assertEvalT = async (input) => assertEval(input, 't');
+  let assertEvalF = async (input) => assertEval(input, 'nil');
+  let assertThrows = async (input, message) => {
+    assert.rejects(() => eval_text(input), ty.LispError);
   };
 
   describe('types', () => {
