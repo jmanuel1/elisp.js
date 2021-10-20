@@ -183,7 +183,7 @@ async function translate_let(args, env, ctx) {
   })()`;
 }
 
-function translate_lambda(args, env) {
+async function translate_lambda(args, env) {
   let error = (msg, tag) => {
     return `Promise.resolve(ty.lambda([], ty.list([ty.symbol('error'), ty.string('${msg}')]))) `
   };
@@ -203,6 +203,26 @@ function translate_lambda(args, env) {
     return error(`Invalid function: ${repr.to_string()}`);
   argspec = argspec.map((arg) => '`' + arg + '`');
   argspec = '[' + argspec.join(', ') + ']';
+
+  /* existing macros? */
+  const newBody = [];
+  if (ty.is_list(body)) {
+    for (let form of body.to_array()) {
+      const sym = form.hd;
+      if (ty.is_list(form) && !form.is_false && ty.is_symbol(sym) && env.is_fbound(sym.to_string())) {
+        let f = env.fget(sym.to_string(), true);
+        if (ty.is_macro(f)) {
+          let expanded = await f.macroexpand(form.tl, env);
+          newBody.push(expanded);
+          continue;
+        }
+      }
+      newBody.push(form);
+    }
+    body = ty.list(newBody);
+  } else {
+    return error(`Invalid function: ${repr.to_string()}`);
+  }
 
   return `Promise.resolve(ty.lambda(${argspec}, ${body.to_jsstring()}))`;
 }

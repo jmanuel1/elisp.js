@@ -280,7 +280,7 @@ describe('macros', () => {
     return assertEvalTop(code, ":before");
   });
 
-  xit("macroexpand: macro after defun", () => {
+  it("macroexpand: macro after defun", () => {
     let code = `
       (fset 'test (lambda () (macro1)))
       (fset 'macro1 '(macro lambda () :after1))

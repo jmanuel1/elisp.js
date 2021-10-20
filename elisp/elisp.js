@@ -11,22 +11,19 @@ async function fcall(args, env) {
   if (args.length != this.args.length)
     throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
 
-  if (!this.func) {
-    let body = this.body;
-    if (body.is_false) {
-      // do nothing, it must evaluate to nil
-    } else if (body.tl.is_false) {
-      // single form, extract
-      body = body.hd;
-    } else {
-      // mutliple forms, prepend `progn`
-      body = ty.cons(ty.symbol('progn'), body);
-    }
-
-    this.jscode = await translate.lambda(this.args, body, env);
-    console.debug(`### fcall : ${this.jscode}`);
-    this.func = eval(this.jscode);
+  let body = this.body;
+  if (body.is_false) {
+    // do nothing, it must evaluate to nil
+  } else if (body.tl.is_false) {
+    // single form, extract
+    body = body.hd;
+  } else {
+    // mutliple forms, prepend `progn`
+    body = ty.cons(ty.symbol('progn'), body);
   }
+
+  this.jscode = await translate.lambda(this.args, body, env);
+  this.func = eval(this.jscode);
 
   try {
     env.push.call(env, this.args, args);
