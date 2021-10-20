@@ -136,7 +136,7 @@ describe('special forms', () => {
 
       it("should not see its own bindings",
           () => assertThrows("(let ((a 1) (b a)) b)"));
-      xit("let* should see its own bindings",
+      it("let* should see its own bindings",
           () => assertEval("(let* ((x 42) (y x)) y)", 42));
 
       it("should fail if bindings are not a sequence",

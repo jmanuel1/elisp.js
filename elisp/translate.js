@@ -183,6 +183,87 @@ async function translate_let(args, env, ctx) {
   })()`;
 }
 
+async function translate_let_star(args, env, ctx) {
+  /* sanity checks */
+  if (args.is_false)
+    throw new ty.LispError('Wrong number of arguments: let', 0);
+  if (!ty.is_cons(args))
+    throw new ty.LispError('Wrong type argument: listp, ' + args.to_jsstring());
+
+  let varlist = args.hd;
+  let body = args.tl;
+  if (!ty.is_list(body))
+    throw new ty.LispError('Wrong type argument: listp, ' + body.to_jsstring());
+
+  /* body preprocessing */
+  if (body.is_false)
+    body = ty.nil
+  else if (body.tl.is_false)
+    body = body.hd;
+  else
+    body = ty.cons(ty.symbol('progn'), body);
+
+  if (!ty.is_sequence(varlist))
+    throw new ty.LispError('Wrong type of argument: sequencep, 2');
+  if (varlist.is_false)
+    /* (let () <body>) */
+    return translate_expr(body, env, ctx);
+
+  let names = [];
+  let values = [];
+  let errors = [];
+  console.debug('varlist', varlist);
+  for (let binding of varlist.to_array()) {
+    if (ty.is_symbol(binding)) {
+      names.push(binding.to_string());
+      values.push(ty.nil.to_jsstring());
+    } else if (ty.is_cons(binding)) {
+      let name = binding.hd;
+      binding = binding.tl;
+      let jsval = await translate_expr(binding.hd || ty.nil, env, ctx);
+      binding = binding.tl;
+      if (binding && !binding.is_false) {
+        let msg = "'let' bindings can have only one value-form: " + name.to_string();
+        errors.push(msg);
+      } else if (!ty.is_symbol(name)) {
+        errors.push("Wrong type argument: symbolp, " + name.to_string());
+      } else if (name.is_selfevaluating()) {
+        let msg = "Attempt to set a constant symbol: " + name.to_string();
+        errors.push(msg);
+      } else {
+        names.push(name.to_string());
+        values.push(jsval);
+      }
+    } else
+      errors.push('Wrong type argument: listp, ' + binding.to_string());
+  }
+
+  if (errors.length) {
+    return `(async () => {
+      throw new ty.LispError("${errors[0]}");
+    })()`;
+  }
+
+
+  let ctx1 = new Context(ctx, names);
+  let jscode = body ? await translate_expr(body, env, ctx1) : ty.nil.to_jsstring();
+  let jsctx = ctx1.to_jsstring(env);
+
+  let jsenv = env.to_jsstring();
+  let jsnames = names.map((n) => '`'+n+'`').join(', ');
+  let jsvalues = values.join(', ');
+  let bindings = [];
+  for (let i = 0; i < names.length; i++) {
+    bindings.push(`${jsenv}.push([\`${names[i]}\`], await Promise.all([${values[i]}]));`);
+  }
+  return `(async () => {
+    ${bindings.join('\n')}
+    ${jsctx} let result = await Promise.resolve(${jscode});
+    ${jsenv}.pop([${jsnames}]);
+    return result;
+  })()`;
+}
+
 async function translate_lambda(args, env) {
   let error = (msg, tag) => {
     return `Promise.resolve(ty.lambda([], ty.list([ty.symbol('error'), ty.string('${msg}')]))) `
@@ -229,6 +310,7 @@ async function translate_lambda(args, env) {
 
 let specials = {
   'let': translate_let,
+  'let*': translate_let_star,
   'lambda': translate_lambda,
 
   'quote': function(args) {
