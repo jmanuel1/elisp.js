@@ -88,8 +88,8 @@ describe('parser', () => {
     it("should parse ?\\C-I",       () => assertCharp('?\\C-I', 9));
     it("should parse ?\\C-ф",       () => assertCharp('?\\C-Ф', (1<<26)+'Ф'.charCodeAt(0)));
 
-    xit("should parse ?\\M-A",       () => assertCharp('?\\M-A', 134217793));
-    xit("should parse ?\\C-\\M-b",   () => assertCharp('?\\C-\\M-b', 134217730));
+    it("should parse ?\\M-A",       () => assertCharp('?\\M-A', 134217793));
+    it("should parse ?\\C-\\M-b",   () => assertCharp('?\\C-\\M-b', 134217730));
   });
 
   describe('.parseSymbol', () => {

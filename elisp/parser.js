@@ -79,16 +79,30 @@ let Lisp = P.createLanguage({
 
     let escCharP = P.string('\\').then(P.any)
       .map((c) => c in escs ? escs[c] : c.charCodeAt(0));
-    let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(P.any)
-      .map((c) => /[a-z]/i.test(c)
-                  ? c.toUpperCase().charCodeAt(0)-64
-                  : (1<<26)+c.charCodeAt(0)
-       );
+    const otherThanCtrlCharP = P.lazy(() => P.alt(metaCharP, uniCharP, octCharP, escCharP, justCharP));
+    let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(otherThanCtrlCharP)
+      .map((charCode) => {
+        const metaMask = charCode&(1<<27);
+        charCode = charCode&~(1<<27);
+        let result;
+        if (charCode <= 127 && /[a-z]/i.test(String.fromCharCode(charCode))) {
+          result = String.fromCharCode(charCode).toUpperCase().charCodeAt(0)-64;
+        } else {
+          result = (1<<26)|charCode;
+        }
+        result |= metaMask;
+        return result;
+      });
     let justCharP = P.any
-      .map((c) => c.charCodeAt(0));
+       .map((c) => c.charCodeAt(0));
+    const otherThanMetaCharP = P.alt(uniCharP, octCharP, ctrlCharP, escCharP, justCharP);
+    const metaCharP = P.string('\\M-').then(otherThanMetaCharP)
+      .map(charCode =>
+        charCode | (1<<27)
+      );
 
     return P.string('?')
-      .then(P.alt(uniCharP, octCharP, ctrlCharP, escCharP, justCharP))
+      .then(P.alt(metaCharP, otherThanMetaCharP))
       .map(ty.integer)
       .desc('character')
   },
