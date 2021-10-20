@@ -164,8 +164,8 @@ function(args) {
  */
 define_subr('error', [[ty.is_symbol, ty.is_string]],
 function(args) {
-  let [tag, message] = args;
-  throw new ty.LispError(message.to_js());
+  let [message] = args;
+  throw new ty.LispError(message.to_js(), 'error');
 });
 
 /*

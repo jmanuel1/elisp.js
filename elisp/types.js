@@ -424,9 +424,10 @@ LispMacro.prototype.macroexpand = async function(args, env) {
  *  Errors
  */
 class LispError extends Error {
-  constructor(...args) {
-    super(...args);
+  constructor(message, tag) {
+    super(message);
     this.name = 'LispError';
+    this.tag = tag || 'error';
 
     let stack = this.stack.split('\n');
     this.stack = stack.slice(0, 1).concat(stack.slice(2)).join('\n');
