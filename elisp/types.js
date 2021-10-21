@@ -40,6 +40,9 @@ LispInteger.prototype = Object.create(LispObject.prototype);
 Object.defineProperty(LispInteger.prototype,
   'is_number', { value: true, writable: false }
 );
+Object.defineProperty(LispInteger.prototype,
+  'type', { value: 'integer', writable: false }
+);
 
 LispInteger.prototype.to_string = function() { return this.num; };
 LispInteger.prototype.to_js = function() { return this.num; };
@@ -77,6 +80,9 @@ LispSymbol.prototype.to_jsstring = function() { return "ty.symbol('" + this.sym 
 Object.defineProperty(LispSymbol.prototype,
   'is_symbol', { value: true, writable: false }
 );
+Object.defineProperty(LispSymbol.prototype,
+  'type', { value: 'symbol', writable: false }
+);
 
 LispSymbol.prototype.equals = function(that) {
   return that && that instanceof LispSymbol
@@ -104,6 +110,7 @@ NilClass.prototype.is_selfevaluating = () => true;
 
 // you can be everything you want to be:
 Object.defineProperty(NilClass.prototype, 'is_symbol', { value: true, writable: false });
+Object.defineProperty(NilClass.prototype, 'type', { value: 'symbol', writable: false });
 
 // ...even a sequence!
 NilClass.prototype.seqlen = () => 0;
@@ -133,6 +140,9 @@ Object.defineProperty(LispCons.prototype,
 );
 Object.defineProperty(LispCons.prototype,
   'is_seq', { value: true, writable: false }
+);
+Object.defineProperty(LispCons.prototype,
+  'type', { value: 'cons', writable: false }
 );
 
 LispCons.prototype.forEach = function(callback) {
@@ -210,6 +220,9 @@ LispString.prototype = Object.create(LispObject.prototype);
 Object.defineProperty(LispString.prototype,
   'is_array', { value: true, writable: false }
 );
+Object.defineProperty(LispString.prototype,
+  'type', { value: 'string', writable: false }
+);
 
 LispString.prototype.to_string = function() {
   let str = this.str;
@@ -246,6 +259,9 @@ LispHashtable.prototype.to_string = function() {
 
 LispHashtable.prototype.to_js = () => this.hash;
 
+Object.defineProperty(LispHashtable.prototype,
+  'type', { value: 'hash-table', writable: false }
+);
 
 /*
  *  vectors
@@ -260,6 +276,9 @@ Object.defineProperty(LispVector.prototype,
 );
 Object.defineProperty(LispVector.prototype,
   'is_seq', { value: true, writable: false }
+);
+Object.defineProperty(LispVector.prototype,
+  'type', { value: 'vector', writable: false }
 );
 
 LispVector.prototype.to_string = function() {
@@ -288,12 +307,19 @@ LispVector.prototype.forEach = function(callback) {
 function LispChartable() { };
 LispChartable.prototype = Object.create(LispObject.prototype);
 
+Object.defineProperty(LispChartable.prototype,
+  'type', { value: 'char-table', writable: false }
+);
+
 /*
  *  bool-vector
  */
 function LispBoolvector() { };
 LispBoolvector.prototype = Object.create(LispObject.prototype);
 
+Object.defineProperty(LispBoolvector.prototype,
+  'type', { value: 'bool-vector', writable: false }
+);
 
 /*
  *  lambda
@@ -344,6 +370,9 @@ LispFun.prototype = Object.create(LispCons.prototype);
 Object.defineProperty(LispFun.prototype,
   'is_function', { value: true, writable: false }
 );
+Object.defineProperty(LispFun.prototype,
+  'type', { value: 'cons', writable: false }
+);
 
 LispFun.prototype.to_js = function() { return this.func; };
 LispFun.prototype.to_jsstring = function() { return this.jscode || '#<thunk>'; };
@@ -382,6 +411,9 @@ LispSubr.prototype = Object.create(LispObject.prototype);
 Object.defineProperty(LispSubr.prototype,
   'is_function', { value: true, writable: false }
 );
+Object.defineProperty(LispSubr.prototype,
+  'type', { value: 'subr', writable: false }
+);
 
 LispSubr.prototype.to_string = function() { return "#<subr " + this.name + ">"; }
 LispSubr.prototype.to_js = function() { return this.func; }
@@ -419,6 +451,9 @@ LispMacro.prototype.macroexpand = async function(args, env) {
   return this.transform.fcall(args, env);
 };
 
+Object.defineProperty(LispMacro.prototype,
+  'type', { value: 'cons', writable: false }
+);
 
 /*
  *  Errors

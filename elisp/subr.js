@@ -52,6 +52,10 @@ define_subr('booleanp', [[ty.any]], function(args) {
   return ty.bool(val == 't' || val == 'nil');
 });
 
+define_subr('type-of', [[ty.any]], function(args) {
+  return ty.symbol(args[0].type);
+});
+
 /*
  *  introspection
  */

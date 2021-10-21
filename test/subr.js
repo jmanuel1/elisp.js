@@ -19,7 +19,7 @@ describe('subr', () => {
   };
 
   describe('types', () => {
-    xit('(type-of "hello") is string',     () => assertEval('(type-of "hello")', 'string'));
+    it('(type-of "hello") is string',     () => assertEval('(type-of "hello")', 'string'));
 
     let type_predicates = [
       'booleanp', 'functionp', 'listp', 'numberp',  'subrp',
