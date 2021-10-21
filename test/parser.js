@@ -124,7 +124,7 @@ describe('parser', () => {
     it('should "handle\\x20escapes"', () => assertStr('"\\x20"', '" "'));
     it('should "handle \\u044e"',     () => assertStr('"\\u044Enicode"', '"юnicode"'));
     it('should "handle \\x41\\ 42"',  () => assertStr('"\\x41\\ 42"', '"A42"'));
-    xit('should render "\\C-a" as "^A"',  () => assertStr('"\\C-a"', "^A"));
+    it('should render "\\C-a" as "^A"',  () => assertStr('"\\C-a"', '"^A"'));
   });
 
   describe('.parseQuote', () => {

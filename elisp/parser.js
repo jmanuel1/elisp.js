@@ -2,6 +2,7 @@
 
 let ty = require('./types.js');
 let P = require('parsimmon');
+const assert = require('assert').strict;
 
 /*
  * Utils
@@ -17,6 +18,59 @@ let uniCharP = P.string('\\u').then(hexdigit.times(4))
   .map((ds) => parseInt(ds.join(''), 16));
 let octCharP = P.string('\\').then(octdigit.times(3))
   .map((os) => parseInt(os.join(''), 8));
+const escs = {
+  a: 7, b: 8, t: 9, n: 10, v: 11, f: 12,
+  r: 13, e: 27, s: 32, '\\': 92, d: 127
+};
+let escCharP = P.string('\\').then(P.any)
+  .map((c) => c in escs ? escs[c] : c.charCodeAt(0));
+let justCharP = P.any
+   .map((c) => c.charCodeAt(0));
+const otherThanCtrlCharP = P.lazy(() => P.alt(metaCharP, uniCharP, octCharP, escCharP, justCharP));
+let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(otherThanCtrlCharP)
+  .map((charCode) => {
+    const metaMask = charCode&(1<<27);
+    charCode = charCode&~(1<<27);
+    let result;
+    if (charCode <= 127 && /[a-z]/i.test(String.fromCharCode(charCode))) {
+      result = String.fromCharCode(charCode).toUpperCase().charCodeAt(0)-64;
+    } else {
+      result = (1<<26)|charCode;
+    }
+    result |= metaMask;
+    assert(isCtrlChar(result));
+    return result;
+  });
+
+function isCtrlChar(charCode) {
+  charCode = charCode&~(1<<27);
+  const asciiInverse = charCode+64;
+  if (asciiInverse <= 127 && /[A-Z]/.test(String.fromCharCode(asciiInverse))) {
+    return true;
+  }
+  return charCode&(1<<26);
+}
+
+function unCtrlChar(charCode) {
+  if (!isCtrlChar(charCode)) {
+    return charCode;
+  }
+  const metaMask = charCode&(1<<27);
+  charCode = charCode&~(1<<27);
+  const asciiInverse = charCode+64;
+  if (asciiInverse <= 127 && /[A-Z]/.test(String.fromCharCode(asciiInverse))) {
+    return asciiInverse;
+  }
+  const result = charCode&~(1<<26)|metaMask;
+  assert(!isCtrlChar(result));
+  return result;
+}
+
+const otherThanMetaCharP = P.alt(uniCharP, octCharP, ctrlCharP, escCharP, justCharP);
+const metaCharP = P.string('\\M-').then(otherThanMetaCharP)
+  .map(charCode =>
+    charCode | (1<<27)
+  );
 
 let wordstop = P.oneOf(mustEscape).or(P.eof);
 
@@ -71,40 +125,10 @@ let Lisp = P.createLanguage({
   },
 
   Character: () => {
-    const escs = {
-      a: 7, b: 8, t: 9, n: 10, v: 11, f: 12,
-      r: 13, e: 27, s: 32, '\\': 92, d: 127
-    };
-    let escsKeys = Object.keys(escs).join('');
-
-    let escCharP = P.string('\\').then(P.any)
-      .map((c) => c in escs ? escs[c] : c.charCodeAt(0));
-    const otherThanCtrlCharP = P.lazy(() => P.alt(metaCharP, uniCharP, octCharP, escCharP, justCharP));
-    let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(otherThanCtrlCharP)
-      .map((charCode) => {
-        const metaMask = charCode&(1<<27);
-        charCode = charCode&~(1<<27);
-        let result;
-        if (charCode <= 127 && /[a-z]/i.test(String.fromCharCode(charCode))) {
-          result = String.fromCharCode(charCode).toUpperCase().charCodeAt(0)-64;
-        } else {
-          result = (1<<26)|charCode;
-        }
-        result |= metaMask;
-        return result;
-      });
-    let justCharP = P.any
-       .map((c) => c.charCodeAt(0));
-    const otherThanMetaCharP = P.alt(uniCharP, octCharP, ctrlCharP, escCharP, justCharP);
-    const metaCharP = P.string('\\M-').then(otherThanMetaCharP)
-      .map(charCode =>
-        charCode | (1<<27)
-      );
-
     return P.string('?')
       .then(P.alt(metaCharP, otherThanMetaCharP))
       .map(ty.integer)
-      .desc('character')
+      .desc('character');
   },
 
   String: () => {
@@ -113,8 +137,19 @@ let Lisp = P.createLanguage({
     let escapes = P.string('\\').then(P.oneOf('"\\'));
     let unichar = uniCharP.map((code) => String.fromCharCode(code));
     let octchar = octCharP.map((code) => String.fromCharCode(code));
+    let ctrlmetachar = ctrlCharP.or(metaCharP).map((code) => {
+      let prefix = '';
+      if (isCtrlChar(code)) {
+        prefix += '^';
+        code = unCtrlChar(code);
+      }
+      if (code&(1<<27)) {
+        throw Error('todo');
+      }
+      return prefix + String.fromCharCode(code);
+    });
 
-    return P.alt(unichar, octchar, ignored, escapes, P.noneOf('"'))
+    return P.alt(ctrlmetachar, unichar, octchar, ignored, escapes, P.noneOf('"'))
       .many().wrap(dquote, dquote)
       .map((cs) => ty.string(cs.join('')))
       .desc("string");
