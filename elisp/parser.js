@@ -160,7 +160,7 @@ let Lisp = P.createLanguage({
 
     let charp = P.noneOf(mustEscape).or(P.string('\\').then(P.any));
     let symp = charp.atLeast(1)
-      .map((atom) => ty.symbol(atom.join('')));
+      .map((atom) => ty.interned_symbol(atom.join('')));
     return nilp.or(symp)
       .desc("symbol");
   },

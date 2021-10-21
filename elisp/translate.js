@@ -124,7 +124,7 @@ async function translate_let(args, env, ctx) {
   else if (body.tl.is_false)
     body = body.hd;
   else
-    body = ty.cons(ty.symbol('progn'), body);
+    body = ty.cons(ty.interned_symbol('progn'), body);
 
   if (!ty.is_sequence(varlist))
     throw new ty.LispError('Wrong type of argument: sequencep, 2');
@@ -201,7 +201,7 @@ async function translate_let_star(args, env, ctx) {
   else if (body.tl.is_false)
     body = body.hd;
   else
-    body = ty.cons(ty.symbol('progn'), body);
+    body = ty.cons(ty.interned_symbol('progn'), body);
 
   if (!ty.is_sequence(varlist))
     throw new ty.LispError('Wrong type of argument: sequencep, 2');
@@ -266,14 +266,14 @@ async function translate_let_star(args, env, ctx) {
 
 async function translate_lambda(args, env) {
   let error = (msg, tag) => {
-    return `Promise.resolve(ty.lambda([], ty.list([ty.symbol('error'), ty.string('${msg}')]))) `
+    return `Promise.resolve(ty.lambda([], ty.list([ty.interned_symbol('error'), ty.string('${msg}')]))) `
   };
   if (args.is_false)
     return error("Invalid function: (lambda)");
   if (!ty.is_list(args))
     return error('Wrong type argument: listp, 1');
 
-  let repr = ty.cons(ty.symbol('lambda'), args);
+  let repr = ty.cons(ty.interned_symbol('lambda'), args);
   let body = args.tl || ty.nil;
   let argv = args.hd || ty.nil;
   if (!ty.is_list(argv))
@@ -407,7 +407,7 @@ let specials = {
     } else if (body.tl.is_false) {
       body = await translate_expr(body.hd, env, ctx);
     } else {
-      body = ty.cons(ty.symbol('progn'), body);
+      body = ty.cons(ty.interned_symbol('progn'), body);
       body = await translate_expr(body, env, ctx);
     }
     return `(async () => {
@@ -418,6 +418,47 @@ let specials = {
     })()`;
   },
 
+  'condition-case': async function(args, env, ctx) {
+    args = args.to_array();
+    let variable;
+    if (args[0].is_false) {
+      variable = 'nil';
+    } else {
+      variable = args[0].to_string();
+    }
+    // console.debug('protected_form', args[1], ty.list(args[1]));
+    const protected_form = await translate_expr(args[1], env, ctx);
+    const handlers = await Promise.all(args.slice(2).map(async handler => {
+      let conditions;
+      if (ty.is_symbol(handler.hd)) {
+        conditions = [handler.hd.to_string()];
+      } else {
+        conditions = handler.hd.to_array().map(cond => cond.to_string());
+      }
+      const body = await specials.progn(handler.tl, env, ctx);
+      return {conditions, body};
+    }));
+    return `(async () => {
+      try {
+        return await ${protected_form};
+      } catch (error) {
+        if (!(error instanceof ty.LispError)) {
+          throw error;
+        }
+        const handlers = ${JSON.stringify(handlers)};
+        for (let {conditions, body} of handlers) {
+          if (conditions.includes(error.tag)) {
+            const error_description = ty.cons(ty.interned_symbol(error.tag), ty.list([ty.string(error.message)]));
+            ${env.to_jsstring()}.push([${JSON.stringify(variable)}], [error_description]);
+            const result = await eval(body);
+            ${env.to_jsstring()}.pop([${JSON.stringify(variable)}]);
+            return result;
+          }
+        }
+        throw error;
+      }
+    })()`;
+  }
 };
 
 

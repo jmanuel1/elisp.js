@@ -60,11 +60,6 @@ function LispSymbol(sym) {
   this.sym = sym;
 };
 
-LispSymbol.interned = {
-  'lambda': new LispSymbol('lambda'),
-  'macro': new LispSymbol('macro'),
-  'quote': new LispSymbol('quote'),
-}
 LispSymbol.make = function(sym) {
   if (sym in this.interned)
     return this.interned[sym];
@@ -75,7 +70,7 @@ LispSymbol.prototype = Object.create(LispObject.prototype);
 
 LispSymbol.prototype.to_string = function() { return this.sym; };
 LispSymbol.prototype.to_js = function() { return Symbol(this.sym); };
-LispSymbol.prototype.to_jsstring = function() { return "ty.symbol('" + this.sym + "')" };
+LispSymbol.prototype.to_jsstring = function() { return "ty.interned_symbol('" + this.sym + "')" };
 
 Object.defineProperty(LispSymbol.prototype,
   'is_symbol', { value: true, writable: false }
@@ -91,6 +86,12 @@ LispSymbol.prototype.equals = function(that) {
 
 LispSymbol.prototype.is_selfevaluating = function() {
   return this.sym === 't' || this.sym.startsWith(':');
+};
+
+LispSymbol.interned = {
+  'lambda': new LispSymbol('lambda'),
+  'macro': new LispSymbol('macro'),
+  'quote': new LispSymbol('quote'),
 };
 
 /*
@@ -492,6 +493,13 @@ exports.is_array =    (obj) => obj.is_array;
 /* constructors */
 exports.integer = (n) => (typeof n === 'undefined') ? LispNil : new LispInteger(n);
 exports.symbol  = (s) => new LispSymbol(s);
+exports.interned_symbol = (s) => {
+  const symbol = LispSymbol.make(s);
+  if (!(s in LispSymbol.interned)) {
+    LispSymbol.interned[s] = symbol;
+  }
+  return symbol;
+};
 exports.list    = (arr) => consify(arr);
 exports.vector  = (arr) => new LispVector(arr);
 exports.string  = (s) => new LispString(s);
