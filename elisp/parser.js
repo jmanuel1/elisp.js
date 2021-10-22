@@ -158,7 +158,8 @@ let Lisp = P.createLanguage({
   Symbol: (r) => {
     let nilp = P.string('nil').lookahead(wordstop).result(ty.nil);
 
-    let charp = P.noneOf(mustEscape).or(P.string('\\').then(P.any));
+    const symbolMustEscape = "#;()[] \t\n\r\\\"'`,";
+    let charp = P.noneOf(symbolMustEscape).or(P.string('\\').then(P.any));
     let symp = charp.atLeast(1)
       .map((atom) => ty.interned_symbol(atom.join('')));
     return nilp.or(symp)
