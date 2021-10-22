@@ -170,7 +170,7 @@ let Lisp = P.createLanguage({
     let quotemap = {"'": "quote", "#'": "function"};
     let quote = P.seqMap(
         P.alt(P.string(",@"), P.string("#'"), P.oneOf("'`,")), r.Expression,
-        (q, e) => ty.list([ty.symbol(quotemap[q] || q), e])
+        (q, e) => ty.list([ty.interned_symbol(quotemap[q] || q), e])
       ).desc("quoted expression");
     // fast backtracking first:
     return P.alt(
