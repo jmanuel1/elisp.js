@@ -68,15 +68,9 @@ env.fset('load', ty.subr('load', [], function(args) {
  *  prelude
  */
 let prelude = [
-`(fset 'defmacro
-  '(macro lambda (name args body)
-      (list 'fset (list 'quote name) (list 'quote (list 'macro 'lambda args body)))))`,
 `(fset 'defun
   '(macro lambda (name args body)
       (list 'fset (list 'quote name) (list 'lambda args body))))`,
-`(fset 'defvar
-  '(macro lambda (name val)
-      (list 'setq name val)))`,
 `(setq *jsdebug* nil)`,
 ];
 prelude.forEach((stmt) => elisp.eval_text(stmt, env));
@@ -126,11 +120,15 @@ let rl = readline.createInterface({
 
 rl.prompt();
 
+let evaled_prelude = false;
+
 rl.on('line', async (line) => {
   line = line.trim();
   if (!line) return;
 
   try {
+    if (!evaled_prelude) await elisp.eval_prelude(env);
+    evaled_prelude = true;
     let result = await elisp.eval_text(line, env);
     console.log(result);
   } catch (e) {

@@ -3,6 +3,7 @@
 const ty = require('./types.js');
 const parser = require('./parser');
 const translate = require('./translate');
+const path = require('path');
 
 const Environment = require('./environment').Environment;
 
@@ -57,11 +58,17 @@ async function eval_text(input, env) {
   return result.to_string();
 }
 
+async function eval_prelude(env) {
+  const load = require('./load');
+  await load.call(env, path.join(__dirname, 'prelude.el'), {isAbsolutePath: true});
+}
+
 /*
  *  Exports
  */
 exports.eval_text = eval_text;
 exports.eval_lisp = eval_lisp;
+exports.eval_prelude = eval_prelude;
 
 exports.fcall = fcall;
 exports.read = parser.read;
