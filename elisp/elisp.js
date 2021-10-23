@@ -9,6 +9,20 @@ const Environment = require('./environment').Environment;
 
 async function fcall(args, env) {
   /* `this` is LispFun, do not call otherwise */
+  // TODO: Combine argument logic with subr argument validation
+  let expected_args_length = this.args.length;
+  const optional_start_index = this.args.indexOf('&optional');
+  if (optional_start_index > -1) {
+    expected_args_length = optional_start_index;
+    if (args.length < expected_args_length) {
+      throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
+    }
+    let optional_arguments = args.slice(optional_start_index);
+    const nil_arguments = new Array(this.args.length - 1 - optional_arguments.length);
+    nil_arguments.fill(ty.nil);
+    optional_arguments = optional_arguments.concat(nil_arguments);
+    args = args.concat(optional_arguments);
+  }
   if (args.length != this.args.length)
     throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
 
