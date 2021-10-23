@@ -31,5 +31,10 @@
   ; TODO: &optional doc, defalias-fset-function property
   (fset name definition))
 
+(defmacro unless (condition &rest forms)
+  (append (list 'if condition nil) forms))
+
+(defun not (condition) (if condition nil t))
+
 ; use Emacs' backquote.el
 (require 'backquote)
