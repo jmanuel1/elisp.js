@@ -14,12 +14,5 @@
 
 (fset 'cadr (lambda (cons-cell) (car (cdr cons-cell))))
 
-; FIXME: use Emacs' backquote.el instead
-(defmacro \` (form)
-  (if (consp form)
-    (if (and (consp (car form)) (eq (car (car form)) '\,))
-      (list 'cons (cdr (car form)) (list '\` (cdr form)))
-      (if (and (consp (car form)) (eq (car (car form)) '\,@))
-        (list 'append (cdr (car form)) (list '\` (cdr form)))
-        (list 'cons (list 'quote (car form)) (list '\` (cdr form)))))
-    (list 'quote form)))
+; use Emacs' backquote.el
+(require 'backquote)
