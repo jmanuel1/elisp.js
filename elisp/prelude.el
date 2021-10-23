@@ -14,5 +14,18 @@
 
 (fset 'cadr (lambda (cons-cell) (car (cdr cons-cell))))
 
+(defmacro defun
+  (name args &rest body)
+      (if (and (stringp (car body)) (cdr body))
+        (setq body (cdr body))
+        nil)
+      (if (and (consp (car body)) (eq (car (car body)) 'declare))
+        (setq body (cdr body))
+        nil)
+      (if (and (consp (car body)) (eq (car (car body)) 'interactive))
+        (setq body (cdr body))
+        nil)
+      (list 'fset (list 'quote name) (append (list 'lambda args) body)))
+
 ; use Emacs' backquote.el
 (require 'backquote)
