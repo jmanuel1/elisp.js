@@ -77,7 +77,7 @@ let wordstop = P.oneOf(mustEscape).or(P.eof);
 let comment = P.string(';')
   .then(P.noneOf('\n').many())
   .then(P.end);
-let gap = P.oneOf(" \t\r\n").or(comment);
+let gap = P.oneOf(" \t\r\n\f").or(comment);
 let optWhitespace = gap.many();
 let whitespace = gap.atLeast(1);
 
