@@ -41,8 +41,16 @@ define_subr('macrop', [[ty.any]], function(args) {
 define_subr('listp', [[ty.any]], function(args) {
   return ty.bool(ty.is_list(args[0]));
 });
+define_subr('nlistp', [[ty.any]], function(args) {
+  return ty.bool(!ty.is_list(args[0]));
+});
+
 define_subr('numberp', [[ty.any]], function(args) {
   return ty.bool(ty.is_number(args[0]));
+});
+
+define_subr('symbolp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_symbol(args[0]));
 });
 
 // subset of symbolp
@@ -51,6 +59,102 @@ define_subr('booleanp', [[ty.any]], function(args) {
   let val = ty.is_symbol(expr) && expr.to_string();
   return ty.bool(val == 't' || val == 'nil');
 });
+
+function natnump(args) {
+  return ty.bool(ty.is_integer(args[0]) && args[0].to_js() >= 0);
+}
+define_subr('natnump', [[ty.any]], natnump);
+define_subr('wholenump', [[ty.any]], natnump);
+
+define_subr('vectorp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_vector(args[0]));
+});
+
+define_subr('threadp', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('string-or-null-p', [[ty.any]], function(args) {
+  return ty.bool(ty.is_string(args[0]) || args[0] === ty.nil);
+});
+
+define_subr('stringp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_string(args[0]));
+});
+
+define_subr('recordp', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('sequencep', [[ty.any]], function(args) {
+  return ty.bool(ty.is_sequence(args[0]));
+});
+
+define_subr('processp', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('mutexp', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('keywordp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_symbol(args[0]) && args[0].to_string()[0] === ':' && args[0].to_string() in ty.interned_symbols);
+});
+
+define_subr('integerp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_integer(args[0]));
+});
+
+define_subr('hash-table-p', [[ty.any]], function(args) {
+  return ty.bool(ty.is_hash_table(args[0]));
+});
+
+define_subr('floatp', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('consp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_cons(args[0]));
+});
+
+define_subr('condition-variable-p', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('char-or-string-p', [[ty.any]], function(args) {
+  return ty.bool(ty.is_integer(args[0]) || ty.is_string(args[0]));
+});
+
+define_subr('char-table-p', [[ty.any]], function(args) {
+  return ty.bool(ty.is_char_table(args[0]));
+});
+
+define_subr('byte-code-function-p', [[ty.any]], function(args) {
+  console.warn('byte code compilation not supported');
+  return ty.nil;
+});
+
+define_subr('case-table-p', [[ty.any]], function(args) {
+  throw Error('todo');
+});
+
+define_subr('bool-vector-p', [[ty.any]], function(args) {
+  return ty.bool(ty.is_bool_vector(args[0]));
+});
+
+define_subr('atom', [[ty.any]], function(args) {
+  return ty.bool(ty.is_atom(args[0]));
+});
+
+define_subr('arrayp', [[ty.any]], function(args) {
+  return ty.bool(ty.is_array(args[0]));
+});
+
+// NOTE: windowp, window-live-p, syntax-table-p, overlayp, number-or-marker-p,
+// markerp, keymapp, integer-or-marker-p, framep, 'frame-configuration-p',
+// 'frame-live-p', fontp, custom-variable-p, commandp, bufferp and
+// window-configuration-p are Emacs concerns
 
 define_subr('type-of', [[ty.any]], function(args) {
   return ty.symbol(args[0].type);

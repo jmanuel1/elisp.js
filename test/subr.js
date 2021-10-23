@@ -29,10 +29,10 @@ describe('subr', () => {
     });
 
     let type_predicates_todo = [
-      'atom', 'arrayp', 'bool-vector-p', 'bufferp', 'byte-code-function-p', 'case-table-p', 'char-or-string-p', 'char-table-p', 'commandp', 'condition-variable-p', 'consp', 'custom-variable-p', 'floatp', 'fontp', 'frame-configuration-p', 'frame-live-p', 'framep', 'hash-table-p', 'integer-or-marker-p', 'integerp', 'keymapp', 'keywordp', 'markerp', 'mutexp', 'nlistp', 'number-or-marker-p', 'overlayp', 'processp', 'recordp', 'sequencep', 'string-or-null-p', 'stringp', 'syntax-table-p', 'threadp', 'vectorp', 'wholenump', 'window-configuration-p', 'window-live-p', 'windowp', 'symbolp', 'natnump',
+      'atom', 'arrayp', 'bool-vector-p', 'byte-code-function-p', 'case-table-p', 'char-or-string-p', 'char-table-p', 'condition-variable-p', 'consp', 'floatp', 'hash-table-p', 'integerp', 'keywordp', 'mutexp', 'nlistp', 'processp', 'recordp', 'sequencep', 'string-or-null-p', 'stringp', 'threadp', 'vectorp', 'wholenump', 'symbolp', 'natnump',
     ];
     type_predicates_todo.forEach((typ) => {
-      xit(typ, () => assertEvalT(`(subrp (symbol-function '${typ}))`));
+      it(typ, () => assertEvalT(`(subrp (symbol-function '${typ}))`));
     });
   });
 

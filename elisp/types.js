@@ -481,6 +481,10 @@ exports.is_vector = (obj) => obj instanceof LispVector;
 exports.is_subr =   (obj) => obj instanceof LispSubr;
 exports.is_macro =  (obj) => obj instanceof LispMacro;
 exports.is_cons =   (obj) => obj instanceof LispCons;
+exports.is_integer = (obj) => obj instanceof LispInteger;
+exports.is_hash_table = (obj) => obj instanceof LispHashtable;
+exports.is_char_table = (obj) => obj instanceof LispChartable;
+exports.is_bool_vector = (obj) => obj instanceof LispBoolvector;
 
 exports.is_function = (obj) => obj.is_function;
 exports.is_symbol =   (obj) => obj.is_symbol;
@@ -526,3 +530,6 @@ exports.from_list = (lst) => {
 /* constants */
 exports.nil     = LispNil;
 exports.t       = new LispSymbol('t');
+
+/* obarray I guess */
+exports.interned_symbols = LispSymbol.interned;
