@@ -27,5 +27,9 @@
         nil)
       (list 'fset (list 'quote name) (append (list 'lambda args) body)))
 
+(defun defalias (name definition)
+  ; TODO: &optional doc, defalias-fset-function property
+  (fset name definition))
+
 ; use Emacs' backquote.el
 (require 'backquote)
