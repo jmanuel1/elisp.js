@@ -286,21 +286,9 @@ async function translate_lambda(args, env) {
   argspec = '[' + argspec.join(', ') + ']';
 
   /* existing macros? */
-  const newBody = [];
   if (ty.is_list(body)) {
-    for (let form of body.to_array()) {
-      const sym = form.hd;
-      if (ty.is_list(form) && !form.is_false && ty.is_symbol(sym) && env.is_fbound(sym.to_string())) {
-        let f = env.fget(sym.to_string(), true);
-        if (ty.is_macro(f)) {
-          let expanded = await f.macroexpand(form.tl, env);
-          newBody.push(expanded);
-          continue;
-        }
-      }
-      newBody.push(form);
-    }
-    body = ty.list(newBody);
+    const newBody = await macroexpand_all(body, env);
+    body = newBody;
   } else {
     return error(`Invalid function: ${repr.to_string()}`);
   }
@@ -523,6 +511,40 @@ async function translate_expr(input, env, ctx) {
   throw new Error('Failed to translate: ' + input.to_string());
 };
 
+async function macroexpand_1(form, env) {
+  if (!ty.is_cons(form))
+    return form;
+  if (!ty.is_symbol(form.hd)) {
+    return form;
+  }
+  let sym = form.hd.sym;
+  if (!env.is_fbound(sym)) {
+    return form;
+  }
+  let f = env.fget(sym, true);
+  if (ty.is_macro(f))
+    return f.macroexpand(form.tl, env);
+  else
+    return form;
+}
+
+async function macroexpand(form, env) {
+  let expanded = await macroexpand_1(form, env);
+  while (expanded !== form) {
+    form = expanded;
+    expanded = await macroexpand_1(form, env);
+  }
+  return expanded;
+}
+
+async function macroexpand_all(form, env) {
+  form = await macroexpand(form, env);
+  if (!ty.is_list(form)) {
+    return form;
+  }
+  return ty.list(await Promise.all(form.to_array().map(subform => macroexpand_all(subform, env))));
+}
+
 /*
  *    Exports
  */
@@ -548,3 +570,6 @@ exports.lambda = async (args, body, env) => {
 };
 
 exports.special_forms = Object.keys(specials);
+
+exports.macroexpand_1 = macroexpand_1;
+exports.macroexpand_all = macroexpand_all;

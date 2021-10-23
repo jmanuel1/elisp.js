@@ -191,13 +191,8 @@ define_subr('eval', [[ty.any]], function(args) {
   return elisp.eval_lisp(args[0]);
 });
 
-define_subr('macroexpand-1', [[ty.any]], function(args) {
-  if (!ty.is_cons(args[0]))
-    return args[0];
-  let expr = args[0];
-  let sym = expr.hd.sym;
-  let f = this.fget(sym, true);
-  return f.macroexpand(expr.tl, this);
+define_subr('macroexpand-1', [[ty.any]], function (args) {
+  return translate.macroexpand_1(args[0], this);
 });
 
 /*

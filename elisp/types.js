@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+let translate;
 var elisp;  /* lazy-loaded './elisp' */
 
 function from_js(val) {
@@ -350,7 +351,9 @@ LispFun.parse_argspec = function(args) {
   return argspec;
 };
 
-LispFun.from = function(lst) {
+LispFun.from = async function(lst, env) {
+  translate = require('./translate');
+
   if (lst.hd.sym !== 'lambda')
     return;
   lst = lst.tl;
@@ -362,7 +365,7 @@ LispFun.from = function(lst) {
   if (!argspec)
     return;
 
-  let body = lst.tl;
+  let body = await translate.macroexpand_all(lst.tl, env);
   return exports.lambda(argspec, body);
 };
 
@@ -436,10 +439,10 @@ function LispMacro(transform) {
   this.tl = transform;
 };
 
-LispMacro.from = function(lst) {
+LispMacro.from = async function(lst, env) {
   if (lst.hd.sym !== 'macro')
     return;
-  let transform = LispFun.from(lst.tl);
+  let transform = await LispFun.from(lst.tl, env);
   if (!transform)
     return;
   return new LispMacro(transform);
@@ -519,9 +522,9 @@ exports.LispError = LispError;
 
 /* functions,macros */
 exports.parse_argspec = LispFun.parse_argspec;
-exports.from_list = (lst) => {
+exports.from_list = async (lst, env) => {
   if (exports.is_cons(lst)) {
-    let callable = LispFun.from(lst) || LispMacro.from(lst);
+    let callable = await LispFun.from(lst, env) || await LispMacro.from(lst, env);
     return callable || lst;
   }
   return lst;
@@ -529,7 +532,7 @@ exports.from_list = (lst) => {
 
 /* constants */
 exports.nil     = LispNil;
-exports.t       = new LispSymbol('t');
+exports.t       = exports.interned_symbol('t');
 
 /* obarray I guess */
 exports.interned_symbols = LispSymbol.interned;

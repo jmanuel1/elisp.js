@@ -20,12 +20,12 @@ Variable.prototype.get = function() {
   let ns = this.is_fun ? "function" : "variable";
   throw new ty.LispError(`Symbol's value as ${ns} is void: ${this.name}`);
 };
-Variable.prototype.set = function(val) {
+Variable.prototype.set = async function(val) {
   if (val instanceof Promise) {
     throw Error('no promises here!');
   }
   if (this.is_fun)
-    val = ty.from_list(val)
+    val = await ty.from_list(val)
   this.stack[0] = val;
   return val;
 };
@@ -68,9 +68,9 @@ Environment.prototype.fun = function(name) {
   return new Variable(name, stack, true);
 }
 
-Environment.prototype.fset = function(name, value) {
+Environment.prototype.fset = async function(name, value) {
   /* try to make it LispFun/LispMacro */
-  value = ty.from_list(value);
+  value = await ty.from_list(value, this);
 
   let stack = this.fs[name];
   if (stack === undefined) {
