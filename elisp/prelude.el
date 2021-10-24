@@ -37,5 +37,10 @@
 (defun not (condition) (if condition nil t))
 (defalias 'null (symbol-function 'not))
 
+(defun > (first &rest others)
+  (if (null others)
+    t
+    (and (not (<= first (car others))) (apply '> others))))
+
 ; use Emacs' backquote.el
 (require 'backquote)
