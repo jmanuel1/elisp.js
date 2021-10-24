@@ -71,6 +71,9 @@ Environment.prototype.fun = function(name) {
 Environment.prototype.fset = async function(name, value) {
   /* try to make it LispFun/LispMacro */
   value = await ty.from_list(value, this);
+  if (!value) {
+    throw new ty.LispError('fset value must be function-like', 'error');
+  }
 
   let stack = this.fs[name];
   if (stack === undefined) {
