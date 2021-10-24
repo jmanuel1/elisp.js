@@ -35,6 +35,7 @@
   (append (list 'if condition nil) forms))
 
 (defun not (condition) (if condition nil t))
+(defalias 'null (symbol-function 'not))
 
 ; use Emacs' backquote.el
 (require 'backquote)
