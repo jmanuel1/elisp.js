@@ -37,6 +37,11 @@
 (defun not (condition) (if condition nil t))
 (defalias 'null (symbol-function 'not))
 
+(defun reverse (the-list)
+  (if (null the-list)
+    nil
+    (append (reverse (cdr the-list)) (list (car the-list)))))
+
 (defun > (first &rest others)
   (if (null others)
     t

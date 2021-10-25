@@ -34,6 +34,16 @@ Context.prototype.jsvar = function(name) {
 
 Context.prototype.addvar = function(name, is_fun) {
   /* gets an existing js variable or creates new */
+  /* FIXME: Be able to have functions and variables with the same name. Elisp is a Lisp-2.
+  For example, the following should work.
+  (defun reverse (list)
+    (if (null list)
+      nil
+      (append (reverse (cdr list)) (list (car list)))))
+  (reverse (2 2))
+
+  This currently fails with an attempt to call (2 2).
+  */
   let jsname;
   if (jsname = this.jsvar(name))
     return jsname;
