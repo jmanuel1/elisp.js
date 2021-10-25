@@ -42,5 +42,31 @@
     t
     (and (not (<= first (car others))) (apply '> others))))
 
+; TODO: work for all types of sequences, check for circular and dotted lists
+(defun length (sequence)
+  (if (null sequence)
+    0
+    (+ 1 (length (cdr sequence)))))
+
 ; use Emacs' backquote.el
 (require 'backquote)
+
+; FIXME: optional doc parameter
+(defmacro define-obsolete-function-alias (obsolete-name current-name when)
+  ; do nothing
+  ; TODO: aliases
+  nil)
+
+(defmacro dolist (header &rest body)
+  (let ((var (car header)) (the-list (car (cdr header))) (result (car (cdr (cdr header))))
+    `((let ((,var nil) (the-list ,the-list))
+      (while the-list
+        ,@body
+        (setq the-list (cdr the-list))))
+      ,result))))
+
+(fset 'push '(macro lambda (element listname) (list 'setq listname (list 'cons element listname))))
+
+(fset 'mapcar '(lambda (function sequence) (if
+  (nilp sequence) nil
+  (cons (funcall function (car sequence)) (mapcar function (cdr sequence))))))
