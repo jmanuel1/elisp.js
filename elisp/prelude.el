@@ -53,6 +53,21 @@
     0
     (+ 1 (length (cdr sequence)))))
 
+(defun nth (n the-list)
+  (if (null the-list)
+    nil
+    (if (= n 0)
+      (car the-list)
+      (nth (- n 1) the-list))))
+
+(defun car-safe (object)
+  (if (consp object)
+    (car object)
+    nil))
+
+(defun /= (n1 n2)
+  (not (= n1 n2)))
+
 ; use Emacs' backquote.el
 (require 'backquote)
 
