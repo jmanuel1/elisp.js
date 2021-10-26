@@ -8,17 +8,18 @@ const subr = require('./subr');
  *  Variables are handles to a value stack inside Environment
  *    (to have less keyed lookups in hot code)
  */
-function Variable(name, stack, is_fun) {
+function Variable(name, stack, is_fun, env) {
   this.name = name;
   this.stack = stack;
   this.is_fun = is_fun;
+  this.env = env;
 }
 /* PERF TODO: compare to properties */
 Variable.prototype.get = function() {
   if (this.stack.length)
     return this.stack[0];
   let ns = this.is_fun ? "function" : "variable";
-  throw new ty.LispError(`Symbol's value as ${ns} is void: ${this.name}`);
+  throw new ty.LispError(`Symbol's value as ${ns} is void: ${this.name}`, 'error', this.env);
 };
 Variable.prototype.set = async function(val) {
   if (val instanceof Promise) {
@@ -50,6 +51,17 @@ function Environment(name, custom_subrs) {
   }
 }
 
+Environment.prototype.copy = function() {
+  const copy = new Environment(this.name);
+  for (let variable in this.vs) {
+    copy.vs[variable] = [...this.vs[variable]];
+  }
+  for (let fun in this.fs) {
+    copy.fs[fun] = [...this.fs[fun]];
+  }
+  return copy;
+}
+
 Environment.prototype.to_jsstring = function() {
   return 'global.' + this.name;
 };
@@ -72,7 +84,7 @@ Environment.prototype.fset = async function(name, value) {
   /* try to make it LispFun/LispMacro */
   value = await ty.from_list(value, this);
   if (!value) {
-    throw new ty.LispError('fset value must be function-like', 'error');
+    throw new ty.LispError('fset value must be function-like', 'error', this);
   }
 
   let stack = this.fs[name];
@@ -91,7 +103,7 @@ Environment.prototype.fget = function(name, is_macro) {
       throw new Error('Macro accessed as a function');
     return stack[0];
   }
-  throw new ty.LispError("Symbol's function definition is void: " + name);
+  throw new ty.LispError("Symbol's function definition is void: " + name, 'error', this);
 }
 
 /*
@@ -103,7 +115,7 @@ Environment.prototype.var_ = function(name) {
     stack = [];
     this.vs[name] = stack;
   }
-  return new Variable(name, stack);
+  return new Variable(name, stack, false, this);
 }
 
 Environment.prototype.set = function() {
@@ -129,7 +141,7 @@ Environment.prototype.get = function(name) {
   let stack = this.vs[name];
   if (stack && stack.length)
     return stack[0];
-  throw new ty.LispError("Symbol's value as variable is void: " + name);
+  throw new ty.LispError("Symbol's value as variable is void: " + name, 'error', this);
 };
 
 Environment.prototype.push = function(names, values) {

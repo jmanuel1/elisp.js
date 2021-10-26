@@ -16,7 +16,7 @@ async function fcall(args, env) {
   if (optional_start_index > -1) {
     expected_args_length = optional_start_index;
     if (args.length < expected_args_length) {
-      throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
+      throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length, 'error', env);
     }
     let optional_argument_count;
     if (has_rest) {
@@ -41,7 +41,7 @@ async function fcall(args, env) {
     new_args = args;
   }
   if (optional_start_index < 0 && !has_rest && args.length != this.args.length)
-    throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length);
+    throw new ty.LispError('Wrong number of arguments: ' + this.to_string() + ', ' + args.length, 'error', env);
 
   const new_argspec = this.args.filter(arg => !['&optional', '&rest'].includes(arg));
 

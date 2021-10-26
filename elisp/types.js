@@ -4,7 +4,7 @@ const assert = require('assert');
 let translate;
 var elisp;  /* lazy-loaded './elisp' */
 
-function from_js(val) {
+function from_js(val, env) {
   if (val instanceof LispObject)
     return val;
   switch (typeof val) {
@@ -13,7 +13,7 @@ function from_js(val) {
     case 'symbol': return new LispSymbol(val.toString().slice(7, -1));
     case 'boolean': return val ? exports.t : LispNil;
     case 'undefined': return LispNil;
-    default: throw new LispError('Failed to lispify: ' + val.toString());
+    default: throw new LispError('Failed to lispify: ' + val.toString(), 'error', env);
   }
 }
 
@@ -28,6 +28,9 @@ LispObject.prototype = {
   to_string: function() { return '#<object>'; },
   extend: function(clss) { clss.prototype = Object.create(this.prototype); },
   equals: function(that) { return this === that; },
+  fcall: function(args, env) {
+    throw new LispError(`${this.to_string()} is not a function`, 'error', env);
+  }
 };
 
 /*
@@ -173,11 +176,11 @@ Object.defineProperty(LispCons.prototype,
   'type', { value: 'cons', writable: false }
 );
 
-LispCons.prototype.forEach = function(callback) {
+LispCons.prototype.forEach = function(callback, env) {
   for (let cur = this; cur != LispNil; cur = cur.tl) {
     callback(cur.hd);
     if (!cur.tl.is_list)
-      throw new LispError('LispCons.forEach: not a regular list');
+      throw new LispError('LispCons.forEach: not a regular list', 'error', env);
   }
 };
 
@@ -392,11 +395,11 @@ function LispFun(args, body, interact, doc) {
   this.tl = new LispCons(argl, body);
 };
 
-LispFun.parse_argspec = function(args) {
+LispFun.parse_argspec = function(args, env) {
   let argspec = [];
   args.forEach((arg) => {
     if (!exports.is_symbol(arg))
-      throw new LispError('Wrong type argument: symbolp, ' + arg.to_string());
+      throw new LispError('Wrong type argument: symbolp, ' + arg.to_string(), 'error', env);
     argspec.push(arg.to_string());
   });
   return argspec;
@@ -412,7 +415,7 @@ LispFun.from = async function(lst, env) {
     return;
 
   let args = lst.hd;
-  let argspec = LispFun.parse_argspec(args);
+  let argspec = LispFun.parse_argspec(args, env);
   if (!argspec)
     return;
 
@@ -535,13 +538,14 @@ LispMacro.prototype.equals = function(that) {
  *  Errors
  */
 class LispError extends Error {
-  constructor(message, tag) {
+  constructor(message, tag, env) {
     super(message);
     this.name = 'LispError';
     this.tag = tag || 'error';
 
     let stack = this.stack.split('\n');
     this.stack = stack.slice(0, 1).concat(stack.slice(2)).join('\n');
+    this.env = env && env.copy();
   }
 }
 

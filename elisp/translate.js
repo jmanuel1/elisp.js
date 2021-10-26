@@ -119,14 +119,14 @@ function translate_fget(name, env, ctx) {
 async function translate_let(args, env, ctx) {
   /* sanity checks */
   if (args.is_false)
-    throw new ty.LispError('Wrong number of arguments: let', 0);
+    throw new ty.LispError('Wrong number of arguments: let, 0', 'error', env);
   if (!ty.is_cons(args))
-    throw new ty.LispError('Wrong type argument: listp, ' + args.to_jsstring());
+    throw new ty.LispError('Wrong type argument: listp, ' + args.to_jsstring(), 'error', env);
 
   let varlist = args.hd;
   let body = args.tl;
   if (!ty.is_list(body))
-    throw new ty.LispError('Wrong type argument: listp, ' + body.to_jsstring());
+    throw new ty.LispError('Wrong type argument: listp, ' + body.to_jsstring(), 'error', env);
 
   /* body preprocessing */
   if (body.is_false)
@@ -137,7 +137,7 @@ async function translate_let(args, env, ctx) {
     body = ty.cons(ty.interned_symbol('progn'), body);
 
   if (!ty.is_sequence(varlist))
-    throw new ty.LispError('Wrong type of argument: sequencep, 2');
+    throw new ty.LispError('Wrong type of argument: sequencep, 2', 'error', env);
   if (varlist.is_false)
     /* (let () <body>) */
     return translate_expr(body, env, ctx);
@@ -173,7 +173,7 @@ async function translate_let(args, env, ctx) {
 
   if (errors.length) {
     return `(async () => {
-      throw new ty.LispError("${errors[0]}");
+      throw new ty.LispError("${errors[0]}", 'error', ${env.to_jsstring()});
     })()`;
   }
 
@@ -196,14 +196,14 @@ async function translate_let(args, env, ctx) {
 async function translate_let_star(args, env, ctx) {
   /* sanity checks */
   if (args.is_false)
-    throw new ty.LispError('Wrong number of arguments: let', 0);
+    throw new ty.LispError('Wrong number of arguments: let, 0', 'error', env);
   if (!ty.is_cons(args))
-    throw new ty.LispError('Wrong type argument: listp, ' + args.to_jsstring());
+    throw new ty.LispError('Wrong type argument: listp, ' + args.to_jsstring(), 'error', env);
 
   let varlist = args.hd;
   let body = args.tl;
   if (!ty.is_list(body))
-    throw new ty.LispError('Wrong type argument: listp, ' + body.to_jsstring());
+    throw new ty.LispError('Wrong type argument: listp, ' + body.to_jsstring(), 'error', env);
 
   /* body preprocessing */
   if (body.is_false)
@@ -214,7 +214,7 @@ async function translate_let_star(args, env, ctx) {
     body = ty.cons(ty.interned_symbol('progn'), body);
 
   if (!ty.is_sequence(varlist))
-    throw new ty.LispError('Wrong type of argument: sequencep, 2');
+    throw new ty.LispError('Wrong type of argument: sequencep, 2', 'error', env);
   if (varlist.is_false)
     /* (let () <body>) */
     return translate_expr(body, env, ctx);
@@ -250,7 +250,7 @@ async function translate_let_star(args, env, ctx) {
 
   if (errors.length) {
     return `(async () => {
-      throw new ty.LispError("${errors[0]}");
+      throw new ty.LispError("${errors[0]}", 'error', ${env.to_jsstring()});
     })()`;
   }
 
@@ -313,7 +313,7 @@ let specials = {
 
   'quote': function(args) {
     if (args.is_false || !args.tl.is_false)
-      throw new ty.LispError('Wrong number of arguments: quote, ' + args.seqlen());
+      throw new ty.LispError('Wrong number of arguments: quote, ' + args.seqlen(), 'error', env);
 
     let what = args.hd;
     return `Promise.resolve(${what.to_jsstring()})`;
@@ -323,7 +323,7 @@ let specials = {
     args = args.to_array();
     console.debug('setq', args);
     if (args.length % 2)
-      throw new ty.LispError('Wrong number of arguments: setq, ' + args.length);
+      throw new ty.LispError('Wrong number of arguments: setq, ' + args.length, 'error', env);
     if (args.length == 0) {
       return 'Promise.resolve(ty.nil)';
     }
@@ -331,9 +331,9 @@ let specials = {
     if (args.length == 2) {
       let [name, value] = args;
       if (!ty.is_symbol(name))
-        throw new ty.LispError('Wrong type argument: symbolp, ' + name.to_string());
+        throw new ty.LispError('Wrong type argument: symbolp, ' + name.to_string(), 'error', env);
       if (name.is_selfevaluating())
-        throw new ty.LispError('Attempt to set a constant symbol: ' + name.to_string());
+        throw new ty.LispError('Attempt to set a constant symbol: ' + name.to_string(), 'error', env);
       name = name.to_string();
 
       if (ctx) {
@@ -351,9 +351,9 @@ let specials = {
       let value = args[i+1];
 
       if (!ty.is_symbol(name))
-        throw new ty.LispError('Wrong type argument: symbolp, ' + name.to_string());
+        throw new ty.LispError('Wrong type argument: symbolp, ' + name.to_string(), 'error', env);
       if (name.is_selfevaluating())
-        throw new ty.LispError('Attempt to set a constant symbol: ' + name.to_string());
+        throw new ty.LispError('Attempt to set a constant symbol: ' + name.to_string(), 'error', env);
       name = name.to_string();
 
       if (ctx) ctx.checkFree(name);
@@ -369,7 +369,7 @@ let specials = {
   'if': async function(args, env, ctx) {
     args = args.to_array();
     if (args.length != 3)
-      throw new ty.LispError('Wrong number of arguments: if, ' + args.length);
+      throw new ty.LispError('Wrong number of arguments: if, ' + args.length, 'error', env);
 
     let cond = await translate_expr(args[0], env);
     let thenb = await translate_expr(args[1], env);
@@ -395,7 +395,7 @@ let specials = {
 
   'while': async function(args, env, ctx) {
     if (args.is_false)
-      throw new ty.LispError("Wrong number of arguments: while, 0");
+      throw new ty.LispError("Wrong number of arguments: while, 0", 'error', env);
     let condition = args.hd;
     let body = args.tl;
 
@@ -495,7 +495,7 @@ async function translate_expr(input, env, ctx) {
       callable = await translate_expr(hd, env, ctx);
     } else {
       /* (:wrongtype ...) */
-      callable = `Promise.resolve(ty.subr('#<error>', [], (() => { throw new ty.LispError('Invalid function: ${hd.to_string()}'); })))`;
+      callable = `Promise.resolve(ty.subr('#<error>', [], (() => { throw new ty.LispError('Invalid function: ${hd.to_string()}', 'error', ${env.to_jsstring()}); })))`;
     }
 
     let jsenv = env.to_jsstring();

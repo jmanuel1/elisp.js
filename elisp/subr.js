@@ -177,7 +177,7 @@ function(args) {
 
 define_subr('jseval', [[ty.any]],
 function(args) {
-  return ty.from_js(eval(args[0].to_js()));
+  return ty.from_js(eval(args[0].to_js()), this);
 });
 
 define_subr('read', [[ty.string]], function(args) {
@@ -311,7 +311,7 @@ define_subr('require', [[ty.symbol], [ty.string, ty.any]], async function(args) 
   }
   await load.call(this, feature + '.el');
   if (!features.includes(feature)) {
-    throw ty.LispError(`feature ${feature} not provided by ${feature}.el`, 'error');
+    throw ty.LispError(`feature ${feature} not provided by ${feature}.el`, 'error', this);
   };
   return args[0];
 });

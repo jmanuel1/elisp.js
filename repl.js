@@ -22,7 +22,7 @@ async function main() {
 
   await env.fset('load', ty.subr('load', [], function(args) {
     if (!ty.is_string(args[0]))
-      throw new ty.LispError('Wrong type argument: stringp, ' + args[0].to_string());
+      throw new ty.LispError('Wrong type argument: stringp, ' + args[0].to_string(), 'error', this);
 
     let tryFileName = (fname) => {
       let tryfile = (f) => {
@@ -48,9 +48,9 @@ async function main() {
           break;
       }
     } else
-      throw new ty.LispError('`load-path` is not set');
+      throw new ty.LispError('`load-path` is not set', 'error', this);
     if (!fullpath)
-      throw new ty.LispError('Cannot open load file: ' + filename);
+      throw new ty.LispError('Cannot open load file: ' + filename, 'error', this);
 
     let file = fs.readFileSync(fullpath);
     if (fullpath.endsWith('.gz'))
