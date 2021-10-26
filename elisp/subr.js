@@ -283,6 +283,33 @@ define_subr('float-time', [[]], function() {
   return ty.integer(Date.now() / 1000);
 });
 
+const features = [];
+
+define_subr('require', [[ty.symbol], [ty.string, ty.any]], async function(args) {
+  const load = require('./load');
+
+  const feature = args[0].to_string();
+  if (args[1] !== ty.nil || args[2] !== ty.nil) {
+    throw Error('todo');
+  }
+  if (features.includes(feature)) {
+    return;
+  }
+  await load.call(this, feature + '.el');
+  if (!features.includes(feature)) {
+    throw ty.LispError(`feature ${feature} not provided by ${feature}.el`, 'error');
+  };
+  return args[0];
+});
+
+define_subr('provide', [[ty.symbol], [ty.list]], function(args) {
+  if (args[1] !== ty.nil) {
+    throw Error('todo');
+  }
+  features.push(args[0].to_string());
+  return ty.nil;
+});
+
 /*
  *  Exports
  */
