@@ -56,6 +56,31 @@ LispInteger.prototype.equals = function(that) {
 };
 
 /*
+ *  LispFloat
+ */
+
+function LispFloat(num) {
+  assert(typeof num === 'number');
+  this.num = num;
+};
+LispFloat.prototype = Object.create(LispObject.prototype);
+Object.defineProperty(LispFloat.prototype,
+  'is_number', { value: true, writable: false }
+);
+Object.defineProperty(LispFloat.prototype,
+  'type', { value: 'float', writable: false }
+);
+
+LispFloat.prototype.to_string = function() { return this.num; };
+LispFloat.prototype.to_js = function() { return this.num; };
+LispFloat.prototype.to_jsstring = function() { return 'ty.float(' + this.num + ')'; };
+
+LispFloat.prototype.equals = function(that) {
+  return that && that instanceof LispFloat
+    && this.num === that.num;
+};
+
+/*
  *  LispSymbol
  */
 function LispSymbol(sym) {
@@ -198,8 +223,8 @@ LispCons.prototype.equals = function(that) {
     && that.hd.equals(this.hd) && that.tl.equals(this.tl);
 };
 
-let consify = (elems) => {
-  let cur = LispNil;
+let consify = (elems, last = LispNil) => {
+  let cur = last;
   while (elems.length) {
     let elem = elems.pop();
     cur = new LispCons(elem, cur);
@@ -546,6 +571,7 @@ exports.is_array =    (obj) => obj.is_array;
 
 /* constructors */
 exports.integer = (n) => (typeof n === 'undefined') ? LispNil : new LispInteger(n);
+exports.float = (n) => (typeof n === 'undefined') ? LispNil : new LispFloat(n);
 exports.symbol  = (s) => new LispSymbol(s);
 exports.interned_symbol = (s) => {
   const symbol = LispSymbol.make(s);
@@ -554,7 +580,7 @@ exports.interned_symbol = (s) => {
   }
   return symbol;
 };
-exports.list    = (arr) => consify(arr);
+exports.list    = (arr, last) => consify(arr, last);
 exports.vector  = (arr) => new LispVector(arr);
 exports.string  = (s) => new LispString(s);
 exports.lambda  = (argspec, body, interact, doc) => new LispFun(argspec, body, interact, doc);

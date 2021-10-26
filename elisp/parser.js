@@ -124,6 +124,12 @@ let Lisp = P.createLanguage({
       .desc("number");
   },
 
+  Float: () => {
+    return P.regexp(/[+-]?[0-9]*\.[0-9]+/)
+      .map(n => ty.float(Number(n)))
+      .desc('float');
+  },
+
   Character: () => {
     return P.string('?')
       .then(P.alt(metaCharP, otherThanMetaCharP))
@@ -158,10 +164,9 @@ let Lisp = P.createLanguage({
   Symbol: (r) => {
     let nilp = P.string('nil').lookahead(wordstop).result(ty.nil);
 
-    const symbolMustEscape = "#;()[] \t\n\r\\\"'`,";
+    const symbolMustEscape = "#;()[] \t\n\r\\\"'`,.";
     let charp = P.noneOf(symbolMustEscape).or(P.string('\\').then(P.any));
-    let symp = charp.atLeast(1)
-      .map((atom) => ty.interned_symbol(atom.join('')));
+    let symp = P.seqMap(charp, charp.or(P.string('.')).many(), (firstChar, atom) => ty.interned_symbol(firstChar + atom.join('')));
     return nilp.or(symp)
       .desc("symbol");
   },
@@ -179,6 +184,7 @@ let Lisp = P.createLanguage({
       quote,
       r.List,
       r.Vector,
+      r.Float,
       r.Integer,
       r.Symbol
     ).wrap(optWhitespace, optWhitespace)
@@ -188,9 +194,12 @@ let Lisp = P.createLanguage({
   List: (r) => {
     let open = P.string('(').then(optWhitespace);
     let close = optWhitespace.then(P.string(')'));
-    return r.Expression.many()
+    let listp = r.Expression.notFollowedBy(P.string('.')).many()
+      .desc("list");
+    const pairp = P.seqMap(r.Expression, P.string('.').then(r.Expression), ty.cons)
+      .desc("pair");
+    return P.seqMap(listp, pairp.fallback(ty.nil), ty.list)
       .wrap(open, close)
-      .map(ty.list)
       .desc("list/pair");
   },
 
