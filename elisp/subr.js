@@ -283,6 +283,20 @@ define_subr('float-time', [[]], function() {
   return ty.integer(Date.now() / 1000);
 });
 
+define_subr('eq', [[ty.any, ty.any]], function(args) {
+  return ty.bool(args[0] === args[1]);
+});
+
+define_subr('equal', [[ty.any, ty.any]], function(args) {
+  if (args[0] === args[1]) {
+    return ty.t;
+  }
+  if (args[0].constructor !== args[1].constructor) {
+    return ty.nil;
+  }
+  return ty.bool(args[0].equals(args[1]));
+});
+
 const features = [];
 
 define_subr('require', [[ty.symbol], [ty.string, ty.any]], async function(args) {

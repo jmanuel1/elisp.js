@@ -36,16 +36,16 @@ describe('subr', () => {
     });
   });
 
-  xdescribe('equality', () => {
+  describe('equality', () => {
     it("(eq 'foo 'foo)",      () => assertEvalT("(eq 'foo 'foo)"));
     it('(eq "asdf" "asdf")',  () => assertEvalF('(eq "asdf" "asdf")'));
-    it("(eq '(1) '(1))",      () => assertEvalF("(eq '(1) '(1)"));
+    it("(eq '(1) '(1))",      () => assertEvalF("(eq '(1) '(1))"));
     it("(eq foo foo)",        () => assertEvalT("(let ((foo '(1 2))) (eq foo foo))"));
     it("(eq [1] [1])",        () => assertEvalF("(eq [1] [1])"));
 
     it("(equal 'foo 'foo)",     () => assertEvalT("(equal 'foo 'foo)"));
     it('(equal "asdf" "asdf")', () => assertEvalT('(equal "asdf" "asdf")'));
-    it("(equal '(1) '(1))",     () => assertEvalT("(equal '(1) '(1)"));
+    it("(equal '(1) '(1))",     () => assertEvalT("(equal '(1) '(1))"));
     it("(equal [1] [1])",       () => assertEvalT("(equal [1] [1])"));
 
     xit("(equal-including-properties",

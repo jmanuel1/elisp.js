@@ -26,7 +26,8 @@ function LispObject() {};
 
 LispObject.prototype = {
   to_string: function() { return '#<object>'; },
-  extend: function(clss) { clss.prototype = Object.create(this.prototype); }
+  extend: function(clss) { clss.prototype = Object.create(this.prototype); },
+  equals: function(that) { return this === that; },
 };
 
 /*
@@ -261,6 +262,23 @@ LispHashtable.prototype.to_string = function() {
 
 LispHashtable.prototype.to_js = () => this.hash;
 
+LispHashtable.prototype.equals = function (that) {
+  if (!(that instanceof LispHashtable)) {
+    return false;
+  }
+  const thisEntries = [...Object.entries(this.hash)].sort((a, b) => a[0] - b[0]);
+  const thatEntries = [...Object.entries(that.hash)].sort((a, b) => a[0] - b[0]);
+  if (thisEntries.length !== thatEntries.length) {
+    return false;
+  }
+  for (let i = 0; i < thisEntries.length; i++) {
+    if (thisEntries[i][0] !== thatEntries[i][0] || !(thisEntries[i][1].equals(thatEntries[i][1]))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 Object.defineProperty(LispHashtable.prototype,
   'type', { value: 'hash-table', writable: false }
 );
@@ -313,6 +331,10 @@ Object.defineProperty(LispChartable.prototype,
   'type', { value: 'char-table', writable: false }
 );
 
+LispChartable.prototype.equals = function () {
+  throw Error('todo');
+}
+
 /*
  *  bool-vector
  */
@@ -322,6 +344,10 @@ LispBoolvector.prototype = Object.create(LispObject.prototype);
 Object.defineProperty(LispBoolvector.prototype,
   'type', { value: 'bool-vector', writable: false }
 );
+
+LispBoolvector.prototype.equals = function () {
+  throw Error('todo');
+}
 
 /*
  *  lambda
@@ -399,6 +425,14 @@ LispFun.prototype.fcall = async function(args, env) {
   }
 };
 
+LispFun.prototype.equals = function (that) {
+  return that instanceof LispFun &&
+    this.args.every((arg, i) => arg === that.args[i]) &&
+    this.body.equals(that.body) &&
+    (this.interact && that.interact ? this.interact.equals(that.interact) : true) &&
+    this.doc === that.doc;
+}
+
 /*
  *  native subroutine
  */
@@ -426,6 +460,15 @@ LispSubr.prototype.to_jsstring = function () { return "subr.all['" + this.name +
 LispSubr.prototype.fcall = async function(args, env) {
   return await Promise.resolve(this.func.call(env, args));
 };
+
+LispSubr.prototype.equals = function(that) {
+  // FIXME: comparing attrs, args
+  return this.name === that.name &&
+    this.args === that.args &&
+    this.func === that.func &&
+    this.attrs === that.attrs &&
+    this.doc === that.doc;
+}
 
 /*
  *  macros
@@ -458,6 +501,10 @@ LispMacro.prototype.macroexpand = async function(args, env) {
 Object.defineProperty(LispMacro.prototype,
   'type', { value: 'cons', writable: false }
 );
+
+LispMacro.prototype.equals = function(that) {
+  return this.transform.equals(that.transform);
+}
 
 /*
  *  Errors
