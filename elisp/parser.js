@@ -26,8 +26,8 @@ let escCharP = P.string('\\').then(P.any)
   .map((c) => c in escs ? escs[c] : c.charCodeAt(0));
 let justCharP = P.any
    .map((c) => c.charCodeAt(0));
-const otherThanCtrlCharP = P.lazy(() => P.alt(metaCharP, uniCharP, octCharP, escCharP, justCharP));
-let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(otherThanCtrlCharP)
+const charP = P.lazy(() => P.alt(ctrlCharP, altCharP, hyperCharP, superCharP, shiftCharP, metaCharP, uniCharP, octCharP, escCharP, justCharP));
+let ctrlCharP = P.string('\\^').or(P.string('\\C-')).then(charP)
   .map((charCode) => {
     const metaMask = charCode&(1<<27);
     charCode = charCode&~(1<<27);
@@ -66,10 +66,27 @@ function unCtrlChar(charCode) {
   return result;
 }
 
-const otherThanMetaCharP = P.alt(uniCharP, octCharP, ctrlCharP, escCharP, justCharP);
-const metaCharP = P.string('\\M-').then(otherThanMetaCharP)
+const META_MODIFER_MASK = 1<<27;
+
+const metaCharP = P.string('\\M-').then(charP)
   .map(charCode =>
     charCode | (1<<27)
+  );
+const altCharP = P.string('\\A-').then(charP)
+  .map(charCode =>
+    charCode | (1<<22)
+  );
+const hyperCharP = P.string('\\H-').then(charP)
+  .map(charCode =>
+    charCode | (1<<24)
+  );
+const superCharP = P.string('\\s-').then(charP)
+  .map(charCode =>
+    charCode | (1<<23)
+  );
+const shiftCharP = P.string('\\S-').then(charP)
+  .map(charCode =>
+    charCode | (1<<25)
   );
 
 let wordstop = P.oneOf(mustEscape).or(P.eof);
@@ -132,7 +149,7 @@ let Lisp = P.createLanguage({
 
   Character: () => {
     return P.string('?')
-      .then(P.alt(metaCharP, otherThanMetaCharP))
+      .then(P.alt(charP))
       .map(ty.integer)
       .desc('character');
   },
@@ -149,8 +166,8 @@ let Lisp = P.createLanguage({
         prefix += '^';
         code = unCtrlChar(code);
       }
-      if (code&(1<<27)) {
-        throw Error('todo');
+      if (code&META_MODIFER_MASK) {
+        code = (code&~META_MODIFER_MASK)|(1<<7);
       }
       return prefix + String.fromCharCode(code);
     });
