@@ -309,7 +309,7 @@ define_subr('require', [[ty.symbol], [ty.string, ty.any]], async function(args) 
   if (features.includes(feature)) {
     return;
   }
-  await load.call(this, feature + '.el');
+  await load(feature + '.el', {}, this);
   if (!features.includes(feature)) {
     throw ty.LispError(`feature ${feature} not provided by ${feature}.el`, 'error', this);
   };

@@ -93,7 +93,7 @@ async function eval_text(input, env) {
 
 async function eval_prelude(env) {
   const load = require('./load');
-  await load.call(env, path.join(__dirname, 'prelude.el'), {isAbsolutePath: true});
+  await load(path.join(__dirname, 'prelude.el'), {isAbsolutePath: true}, env);
 }
 
 /*
