@@ -143,6 +143,7 @@ let Lisp = P.createLanguage({
 
   Float: () => {
     return P.regexp(/[+-]?[0-9]*\.[0-9]+/)
+      .lookahead(wordstop)
       .map(n => ty.float(Number(n)))
       .desc('float');
   },
@@ -181,11 +182,11 @@ let Lisp = P.createLanguage({
   Symbol: (r) => {
     let nilp = P.string('nil').lookahead(wordstop).result(ty.nil);
 
-    const symbolMustEscape = "#;()[] \t\n\r\\\"'`,.";
+    const symbolMustEscape = "#;()[] \t\n\r\\\"'`,";
     let charp = P.noneOf(symbolMustEscape).or(P.string('\\').then(P.any));
-    let symp = P.seqMap(charp, charp.or(P.string('.')).many(), (firstChar, atom) => ty.interned_symbol(firstChar + atom.join('')));
-    return nilp.or(symp)
-      .desc("symbol");
+    let symp = charp.atLeast(1).map(atom => ty.interned_symbol(atom.join('')));
+    return P.notFollowedBy(P.string('.').lookahead(wordstop))
+      .then(nilp.or(symp).desc("symbol"));
   },
 
   Expression: (r) => {
