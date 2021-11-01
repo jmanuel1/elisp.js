@@ -152,6 +152,10 @@ define_subr('arrayp', [[ty.any]], function(args) {
   return ty.bool(ty.is_array(args[0]));
 });
 
+define_subr('zerop', [[ty.number]], function(args) {
+  return num_equals.call(this, [args[0], ty.integer(0)]);
+});
+
 // NOTE: windowp, window-live-p, syntax-table-p, overlayp, number-or-marker-p,
 // markerp, keymapp, integer-or-marker-p, framep, 'frame-configuration-p',
 // 'frame-live-p', fontp, custom-variable-p, commandp, bufferp and
@@ -311,6 +315,27 @@ define_subr('equal', [[ty.any, ty.any]], function(args) {
   }
   return ty.bool(args[0].equals(args[1]));
 });
+
+function num_equals(args) {
+  if (args.length == 0) {
+    throw new ty.LispError('Wrong number of arguments: =, 0', 'error', this);
+  }
+  args = args.map(arg => {
+    if (!ty.is_number(arg)) {
+      throw Error('todo');
+    }
+    return arg.to_js();
+  });
+  const number = args[0];
+  for (let arg of args) {
+    if (arg !== number) {
+      return ty.nil;
+    }
+  }
+  return ty.t;
+}
+
+define_subr('=', [[], [], ty.any], num_equals);
 
 const features = [];
 
