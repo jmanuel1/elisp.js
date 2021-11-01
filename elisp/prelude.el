@@ -41,6 +41,7 @@
   (if (null the-list)
     nil
     (append (reverse (cdr the-list)) (list (car the-list)))))
+(defalias 'nreverse (symbol-function 'reverse))
 
 (defun > (first &rest others)
   (if (null others)
@@ -67,6 +68,8 @@
 
 (defun /= (n1 n2)
   (not (= n1 n2)))
+
+(defalias 'defsubst (symbol-function 'defun))
 
 ; use Emacs' backquote.el
 (require 'backquote)
