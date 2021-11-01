@@ -2,6 +2,7 @@
 
 const ty = require('./types');
 const translate = require('./translate');
+const util = require('util');
 var elisp;
 
 let subroutines_registry = {};
@@ -265,11 +266,25 @@ function(args) {
 /*
  *  Errors
  */
-define_subr('error', [[ty.is_symbol, ty.is_string]],
+define_subr('error', [[ty.is_symbol], [], ty.is_string],
 function(args) {
-  let [message] = args;
-  throw new ty.LispError(message.to_js(), 'error');
+  let [message, ...formatArgs] = args;
+  throw new ty.LispError(format_message(message.to_js(), formatArgs), 'error', this);
 });
+
+function format_message(message, args) {
+  let index = 0;
+  args = args.map((x) => x.to_string());
+  const formatArgs = [];
+  message = message.replace(/%\w/g, match => {
+    if (match === '%S') {
+      return args[index++];
+    }
+    formatArgs.push(args[index++]);
+    return match;
+  });
+  return util.format.apply(null, [message, ...formatArgs]);
+}
 
 /*
  *  Utils
