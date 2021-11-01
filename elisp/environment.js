@@ -2,6 +2,7 @@
 
 const ty = require('./types');
 const subr = require('./subr');
+const vars = require('./vars');
 
 
 /*
@@ -39,6 +40,9 @@ function Environment(name, custom_subrs) {
 
   /* values: name -> stack of values */
   this.vs = {};
+  for (let v in vars.all) {
+    this.vs[v] = [ vars.all[v] ];
+  }
 
   /* functions: name->LispFun */
   this.fs = {};
