@@ -47,7 +47,7 @@ describe('parser', () => {
     it("#b-.",  () => assert.equal(parser.read('#b-.'), ty.nil));
   });
 
-  xdescribe('.parseFloat', () => {
+  describe('.parseFloat', () => {
     let assertFloatP = (input, num) => {
       let val = parser.read(input);
       assert.equal(val.to_js(), num);
@@ -55,7 +55,7 @@ describe('parser', () => {
 
     it("1500.0",      () => assertFloatP('1500.0', 1500.0));
     it("+15e2",       () => assertFloatP('15e2', 1500.0));
-    it("15.0e+2",     () => assertFloatP('15.0+2', 1500.0));
+    it("15.0e+2",     () => assertFloatP('15.0e+2', 1500.0));
     it("+1500000e-3", () => assertFloatP('+1500000e-3', 1500.0));
     it(".15e4",       () => assertFloatP('.15e4', 1500.0));
   });

@@ -142,7 +142,7 @@ let Lisp = P.createLanguage({
   },
 
   Float: () => {
-    return P.regexp(/[+-]?[0-9]*\.[0-9]+/)
+    return P.regexp(/[+-]?(?:[0-9]*\.[0-9]+(?:e[+-]?[0-9]+)?|[0-9]+e[+-]?[0-9]+)/)
       .lookahead(wordstop)
       .map(n => ty.float(Number(n)))
       .desc('float');
